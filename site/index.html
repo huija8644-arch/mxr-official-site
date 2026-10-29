@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f3ef">
+  <meta name="description" content="棉小柔智能肤质毛巾机，让日常用巾从随手走向更贴合肌肤状态的护理体验。探索 AI 肤质识别、压缩毛巾舒展与清晨日常。">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="棉小柔">
+  <meta property="og:title" content="棉小柔｜让每一次用巾，都更懂肌肤">
+  <meta property="og:description" content="以智能识肤与柔软用巾，重新想象每天的护理时刻。">
+  <title>棉小柔｜让每一次用巾，都更懂肌肤</title>
+  <link rel="icon" type="image/webp" href="./assets/brand-logo.webp">
+  <link rel="preload" as="image" href="./assets/morning-vanity.webp" fetchpriority="high">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./js/main.mjs"></script>
+</head>
+<body data-scene="morning">
+  <a class="skip-link" href="#story">跳到主要内容</a>
+
+  <div class="atmosphere" id="atmosphere" aria-hidden="true">
+    <div class="atmosphere__wash"></div>
+    <div class="parallax-stack">
+      <img class="parallax-layer layer-curtain" data-depth="0.08" src="./assets/foreground-01.webp" alt="" fetchpriority="high">
+      <img class="parallax-layer layer-leaves" data-depth="0.12" src="./assets/foreground-02.webp" alt="" fetchpriority="high">
+      <img class="parallax-layer layer-vase" data-depth="0.05" src="./assets/foreground-03.webp" alt="" loading="lazy">
+      <img class="parallax-layer layer-quartz" data-depth="0.03" src="./assets/foreground-04.webp" alt="" loading="lazy">
+      <img class="parallax-layer layer-fiber" data-depth="0.16" src="./assets/foreground-08.webp" alt="" loading="lazy">
+      <img class="parallax-layer layer-sunbeam" data-depth="0.06" src="./assets/foreground-10.webp" alt="" fetchpriority="high">
+    </div>
+  </div>
+
+  <div class="world" id="world" aria-hidden="true">
+    <canvas id="worldCanvas"></canvas>
+    <img id="productFallback" src="./assets/product-cutout.webp" alt="">
+  </div>
+
+  <div class="loading-note" id="loadingNote" role="status" aria-live="polite">
+    <span class="loading-note__dot"></span>
+    <span id="loadingText">正在准备产品结构预览</span>
+    <span class="loading-note__track"><span id="loadingBar"></span></span>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="#intro" aria-label="棉小柔，回到首页">
+      <img src="./assets/brand-logo.webp" alt="棉小柔">
+      <span>智能肤质毛巾机</span>
+    </a>
+    <nav class="topnav" aria-label="主要章节">
+      <a href="#skin">智能识肤</a>
+      <a href="#structure">产品结构</a>
+      <a href="#towel">柔软时刻</a>
+      <a href="#ritual">日常护理</a>
+    </nav>
+    <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false" aria-label="暂停页面动态效果">暂停动态</button>
+  </header>
+
+  <main id="story">
+    <section class="chapter chapter--hero" id="intro" data-scene="morning" aria-labelledby="hero-title">
+      <div class="chapter__inner">
+        <div class="copy copy--hero">
+          <p class="eyebrow"><span>棉小柔</span><i></i> 智能肤质毛巾机</p>
+          <h1 id="hero-title">被看见的肌肤，<br><em>从一方毛巾开始。</em></h1>
+          <p class="lead">把识肤这一步，放进每天的用巾时刻。让护理更从容，也更贴近你。</p>
+          <a class="button button--dark" href="#skin">向下探索 <span aria-hidden="true">↓</span></a>
+          <p class="microcopy">清晨的光，照见新的护理习惯</p>
+        </div>
+        <div class="hero__spacer" aria-hidden="true"></div>
+      </div>
+      <div class="scroll-cue" aria-hidden="true"><span></span>向下滚动，开启故事</div>
+    </section>
+
+    <section class="chapter chapter--skin" id="skin" data-scene="tech" aria-labelledby="skin-title">
+      <div class="chapter__inner chapter__inner--split">
+        <div class="copy copy--narrow">
+          <p class="eyebrow"><span>01</span><i></i> 先看见，再贴近</p>
+          <h2 id="skin-title">肌肤的状态，<br><em>值得被认真对待。</em></h2>
+          <p class="body-copy">棉小柔把 AI 肤质识别融入用巾护理的起点，让选择不再只是凭感觉。了解界面流程，再进入每天的柔软时刻。</p>
+          <p class="small-note">以下画面为项目提供的 UI 设计稿演示。屏幕中的数值、结果与建议尚未作为经验证的产品承诺；公开使用前需由品牌与产品团队确认。</p>
+          <a class="text-link" href="#structure">继续了解产品结构 <span aria-hidden="true">↗</span></a>
+        </div>
+        <figure class="screen-card">
+          <div class="screen-card__halo"></div>
+          <video class="screen-card__video" data-scrub preload="none" muted playsinline controls poster="./assets/ui-detect.webp" aria-label="项目提供的肤质检测界面演示">
+            <source src="./assets/ui-state-demo.mp4" type="video/mp4">
+          </video>
+          <figcaption><span class="pulse-mark"></span> 项目 UI 状态动效 · 演示稿</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter chapter--structure" id="structure" data-scene="studio" aria-labelledby="structure-title">
+      <div class="chapter__inner chapter__inner--structure">
+        <div class="copy copy--structure">
+          <p class="eyebrow"><span>02</span><i></i> 结构，正在展开</p>
+          <h2 id="structure-title">让一台设备，<br><em>看得见它的用心。</em></h2>
+          <p class="body-copy">从外观轮廓到内部层级，以产品模型呈现棉小柔智能肤质毛巾机的结构关系。滚动时，镜头靠近，分件逐步展开。</p>
+          <p class="small-note">CAD 分件与位移为网页视觉预演；盖板轴心、抽屉行程及内部装配关系未经工程验证，不代表实机动作或操作方式。</p>
+          <span class="pill">结构展示 · 预演状态</span>
+        </div>
+        <figure class="structure-card">
+          <img src="./assets/exploded-guide.webp" alt="棉小柔智能肤质毛巾机 Blender 模型的分件爆炸对位预览图" loading="lazy">
+          <figcaption><span>MODEL STUDY</span><span>SCROLL TO REVEAL</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter chapter--towel" id="towel" data-scene="soft" aria-labelledby="towel-title">
+      <div class="chapter__inner chapter__inner--split chapter__inner--towel">
+        <div class="copy copy--narrow">
+          <p class="eyebrow"><span>03</span><i></i> 从压缩，到舒展</p>
+          <h2 id="towel-title">遇水舒展，<br><em>把柔软还给触感。</em></h2>
+          <p class="body-copy">一枚压缩毛巾，在水的触碰下慢慢舒展。跟随页面滚动，观看它从紧实到蓬松的变化。</p>
+          <a class="text-link" href="#ritual">走进清晨的日常 <span aria-hidden="true">↗</span></a>
+        </div>
+        <figure class="towel-card">
+          <div class="towel-card__label"><span>01 — 04</span><span>PRESS · WATER · OPEN · SOFT</span></div>
+          <video class="towel-card__video" data-scrub preload="none" muted playsinline controls poster="./assets/foreground-05.webp" aria-label="压缩毛巾遇水并逐渐舒展的短片">
+            <source src="./assets/towel-transform.mp4" type="video/mp4">
+          </video>
+          <figcaption>压缩 <i></i> 遇水 <i></i> 舒展 <i></i> 柔软时刻</figcaption>
+        </figure>
+      </div>
+      <img class="chapter-float chapter-float--coin" src="./assets/foreground-06.webp" alt="" loading="lazy" aria-hidden="true">
+      <img class="chapter-float chapter-float--water" src="./assets/foreground-07.webp" alt="" loading="lazy" aria-hidden="true">
+    </section>
+
+    <section class="chapter chapter--ritual" id="ritual" data-scene="morning" aria-labelledby="ritual-title">
+      <div class="chapter__inner chapter__inner--split">
+        <div class="copy copy--narrow">
+          <p class="eyebrow"><span>04</span><i></i> 回到每天的清晨</p>
+          <h2 id="ritual-title">把贴心，放进<br><em>日常用巾的每一步。</em></h2>
+          <p class="body-copy">在梳妆台前停一停：先了解肌肤状态，再取用准备好的毛巾。智能设备不必抢走生活的主角，只让熟悉的护理，多一份从容。</p>
+          <div class="ritual-tags"><span>日常护理</span><span>智能便捷</span><span>柔软相伴</span></div>
+        </div>
+        <figure class="daily-product">
+          <img src="./assets/product-cutout.webp" alt="棉小柔智能肤质毛巾机产品外观，项目提供的透明底产品图" loading="lazy">
+          <figcaption>棉小柔智能肤质毛巾机</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter chapter--closing" id="closing" data-scene="warm" aria-labelledby="closing-title">
+      <div class="closing-lockup">
+        <img src="./assets/brand-logo.webp" alt="棉小柔">
+        <p class="eyebrow">柔软科技 · 日常护理</p>
+        <h2 id="closing-title">让每一次用巾，<br><em>都更懂肌肤。</em></h2>
+        <p class="body-copy">棉小柔智能肤质毛巾机<br>从看见肌肤，到回到柔软日常。</p>
+        <a class="button button--dark" href="#skin">了解产品体验 <span aria-hidden="true">↑</span></a>
+      </div>
+      <img class="closing-tray" src="./assets/foreground-09.webp" alt="" loading="lazy" aria-hidden="true">
+    </section>
+  </main>
+
+  <div class="story-progress" aria-hidden="true"><span id="progressFill"></span></div>
+  <footer class="site-footer">
+    <span>棉小柔 · 项目预览版</span>
+    <span>产品 UI 与结构动效均为项目演示素材，正式对外前需完成品牌、合规及工程确认。</span>
+  </footer>
+  <noscript><p class="noscript-note">页面的文字、图片与章节导航仍可浏览；滚动联动的 3D 镜头需要开启 JavaScript。</p></noscript>
+</body>
+</html>
