@@ -3,16 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4f3ef">
-  <meta name="description" content="棉小柔智能肤质毛巾机，把识肤这一步放进每天的用巾时刻。沿清晨、识肤、结构与柔软体验，探索棉小柔的护理旅程。">
+  <meta name="theme-color" content="#efe9df">
+  <meta name="description" content="棉小柔智能肤质毛巾机，把识肤这一步放进每天的用巾时刻。跟随九幕连续镜头，从清晨、识肤、结构到柔软日常。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="棉小柔">
-  <meta property="og:title" content="棉小柔｜把识肤这一步，放进每天的用巾时刻">
+  <meta property="og:title" content="棉小柔｜被看见的肌肤，从一方毛巾开始">
   <meta property="og:description" content="以智能识肤与柔软用巾，重新想象每天的护理时刻。">
-  <title>棉小柔｜把识肤这一步，放进每天的用巾时刻</title>
+  <title>棉小柔｜被看见的肌肤，从一方毛巾开始</title>
   <link rel="icon" type="image/webp" href="./assets/brand-logo.webp">
-  <link rel="preload" as="image" href="./assets/morning-vanity.webp" fetchpriority="high">
-  <link rel="preload" as="image" href="./assets/product-cutout.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/bg-hero.webp" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">
     {
@@ -27,213 +26,191 @@
 <body data-scene="intro">
   <a class="skip-link" href="#story">跳到主要内容</a>
 
-  <div class="atmosphere" id="atmosphere" aria-hidden="true">
-    <div class="atmosphere__wash"></div>
-    <div class="parallax-stack">
-      <img class="parallax-layer layer-curtain" src="./assets/foreground-01.webp" alt="">
-      <img class="parallax-layer layer-leaves" src="./assets/foreground-02.webp" alt="">
-      <img class="parallax-layer layer-vase" src="./assets/foreground-03.webp" alt="">
-      <img class="parallax-layer layer-quartz" src="./assets/foreground-04.webp" alt="">
-      <img class="parallax-layer layer-towel" src="./assets/foreground-05.webp" alt="">
-      <img class="parallax-layer layer-fiber" src="./assets/foreground-08.webp" alt="">
-      <img class="parallax-layer layer-sunbeam" src="./assets/foreground-10.webp" alt="">
+  <div class="world" id="world" aria-hidden="true">
+    <canvas id="worldCanvas"></canvas>
+    <div class="world__fallback">
+      <img src="./assets/bg-hero.webp" alt="" class="world__fallback-bg">
+      <img id="productFallback" src="./assets/product-cutout.webp" alt="">
     </div>
   </div>
 
-  <div class="world" id="world" aria-hidden="true">
-    <canvas id="worldCanvas"></canvas>
-    <img id="productFallback" src="./assets/product-cutout.webp" alt="">
-  </div>
   <div class="structure-callouts" id="structureCallouts" aria-hidden="true">
-    <span data-model-part="FACE-TOWEL-LCD_24"><i></i><b>显示屏</b></span>
-    <span data-model-part="FACE-TOWEL-CAMERA-ASS_ASM_60_ASM"><i></i><b>摄像头模组</b></span>
-    <span data-model-part="FACE-TOWEL-ROTATING-COVERA_ASM__ASM"><i></i><b>上盖分件</b></span>
-    <span data-model-part="FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM"><i></i><b>底部滑动总成</b></span>
+    <span data-model-part="FACE-TOWEL-LCD_24"><i></i><b>显示屏</b><small>LCD</small></span>
+    <span data-model-part="FACE-TOWEL-CAMERA-ASS_ASM_60_ASM"><i></i><b>摄像头模组</b><small>CAMERA</small></span>
+    <span data-model-part="FACE-TOWEL-ROTATING-COVERA_ASM__ASM"><i></i><b>上盖分件</b><small>TOP COVER</small></span>
+    <span data-model-part="HIGH-VOLTAGE-BOARD-PCBA_19"><i></i><b>电路板</b><small>PCBA</small></span>
   </div>
 
   <div class="loading-note" id="loadingNote" role="status" aria-live="polite">
-    <span class="loading-note__dot"></span>
     <span id="loadingText">正在搭建清晨护理空间</span>
     <span class="loading-note__track"><span id="loadingBar"></span></span>
   </div>
 
-  <aside class="chapter-rail" aria-label="护理旅程章节导航">
-    <div class="chapter-rail__meta"><span>THE CARE PATH</span><strong><span id="worldStep">01</span><i>/</i>09</strong></div>
-    <nav>
-      <a href="#intro" aria-label="第1章：晨光入场"><span>01</span><b>晨光</b></a>
-      <a href="#skin" aria-label="第2章：靠近，识肤开始"><span>02</span><b>识肤</b></a>
-      <a href="#result" aria-label="第3章：读懂状态"><span>03</span><b>状态</b></a>
-      <a href="#structure" aria-label="第4章：产品结构展开"><span>04</span><b>结构</b></a>
-      <a href="#towel" aria-label="第5章：压缩毛巾遇水舒展"><span>05</span><b>遇水</b></a>
-      <a href="#drawer" aria-label="第6章：抽屉送达视觉预演"><span>06</span><b>出仓</b></a>
-      <a href="#ritual" aria-label="第7章：回到清晨日常"><span>07</span><b>日常</b></a>
-      <a href="#texture" aria-label="第8章：触感与细节回环"><span>08</span><b>触感</b></a>
-      <a href="#closing" aria-label="第9章：品牌终章"><span>09</span><b>品牌</b></a>
-    </nav>
-    <p id="worldStage">晨光入场</p>
-  </aside>
-
   <header class="topbar">
     <a class="brand" href="#intro" aria-label="棉小柔，回到首页">
       <img src="./assets/brand-logo.webp" alt="棉小柔">
-      <span>智能肤质毛巾机</span>
     </a>
     <nav class="topnav" aria-label="主要章节">
-      <a href="#skin">智能识肤</a>
-      <a href="#structure">产品结构</a>
-      <a href="#towel">柔软时刻</a>
-      <a href="#ritual">日常护理</a>
+      <a href="#skin">识肤</a>
+      <a href="#structure">结构</a>
+      <a href="#towel">柔软</a>
+      <a href="#ritual">日常</a>
     </nav>
-    <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false" aria-label="暂停氛围动效">氛围动效：开</button>
+    <div class="topbar__actions">
+      <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false" aria-label="暂停氛围动效">氛围动效：开</button>
+      <a class="pill-cta" href="#closing">了解棉小柔</a>
+    </div>
   </header>
 
+  <nav class="chapter-index" aria-label="护理旅程章节">
+    <p class="chapter-index__now"><span id="worldStep">01</span> <b id="worldStage">晨光入场</b></p>
+    <ol>
+      <li><a href="#intro" aria-label="第1幕 晨光入场">01</a></li>
+      <li><a href="#skin" aria-label="第2幕 识肤">02</a></li>
+      <li><a href="#result" aria-label="第3幕 状态">03</a></li>
+      <li><a href="#structure" aria-label="第4幕 结构">04</a></li>
+      <li><a href="#towel" aria-label="第5幕 遇水">05</a></li>
+      <li><a href="#drawer" aria-label="第6幕 出仓">06</a></li>
+      <li><a href="#ritual" aria-label="第7幕 日常">07</a></li>
+      <li><a href="#texture" aria-label="第8幕 触感">08</a></li>
+      <li><a href="#closing" aria-label="第9幕 品牌">09</a></li>
+    </ol>
+  </nav>
+  <div class="story-progress" aria-hidden="true"><span id="progressFill"></span></div>
+
   <main id="story">
-    <section class="chapter chapter--hero" id="intro" data-scene="intro" aria-labelledby="hero-title">
-      <div class="chapter__inner">
-        <div class="copy copy--hero">
-          <p class="eyebrow"><span>棉小柔</span><i></i> 智能肤质毛巾机</p>
-          <h1 id="hero-title">被看见的肌肤，<br><em>从一方毛巾开始。</em></h1>
-          <p class="lead">把识肤这一步，放进每天的用巾时刻。让护理更从容，也更贴近你。</p>
-          <a class="button button--dark" href="#skin">向下探索 <span aria-hidden="true">↓</span></a>
-          <p class="microcopy">清晨的光，照见新的护理习惯</p>
-        </div>
-        <div class="hero__spacer" aria-hidden="true"></div>
+    <!-- 01 -->
+    <section class="chapter chapter--hero" id="intro" data-scene="intro" data-tone="light" aria-labelledby="hero-title">
+      <div class="hero__top" data-reveal>
+        <p class="kicker">AI SKIN-SENSING TOWEL MACHINE</p>
+        <p class="kicker kicker--right">一处清晨 · 九幕护理旅程</p>
       </div>
-      <div class="scroll-cue" aria-hidden="true"><span></span>向下滚动，开启护理旅程</div>
+      <div class="hero__copy" data-reveal>
+        <p class="eyebrow">棉小柔 · 智能肤质毛巾机</p>
+        <h1 id="hero-title">被看见的肌肤，<br><span class="accent">从一方毛巾开始。</span></h1>
+        <p class="lead">把识肤这一步，放进每天的用巾时刻。</p>
+        <a class="button" href="#skin">开始旅程 <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="hero__clip" data-reveal>
+        <video src="./assets/towel-transform.mp4" muted loop playsinline autoplay preload="metadata" aria-label="压缩毛巾遇水舒展短片"></video>
+        <figcaption><span>▶ PLAY</span> 遇水舒展 · 6s</figcaption>
+      </figure>
+      <dl class="stat-band" data-reveal>
+        <div><dt>09</dt><dd>幕连续镜头</dd></div>
+        <div><dt>03</dt><dd>个生活时段</dd></div>
+        <div><dt>01</dt><dd>方柔软毛巾</dd></div>
+        <div><dt>∞</dt><dd>个日常清晨</dd></div>
+      </dl>
     </section>
 
-    <section class="chapter chapter--skin" id="skin" data-scene="scan" aria-labelledby="skin-title">
-      <div class="chapter__inner chapter__inner--split">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>01 / 09</span><i></i> 靠近，识肤开始</p>
-          <h2 id="skin-title">肌肤的状态，<br><em>值得被认真对待。</em></h2>
-          <p class="body-copy">棉小柔把 AI 肤质识别融入用巾护理的起点，让选择不再只是凭感觉。沿着镜头的靠近，看看界面如何开启一次识别流程。</p>
-          <p class="small-note">以下为项目提供的 UI 设计稿演示。屏幕中的数值、结果与建议尚未作为经验证的产品承诺；公开使用前需由品牌与产品团队确认。</p>
-          <a class="text-link" href="#result">继续看状态流转 <span aria-hidden="true">↗</span></a>
-        </div>
-        <figure class="screen-card">
-          <div class="screen-card__halo"></div>
-          <video class="screen-card__video" data-scrub preload="none" muted playsinline controls poster="./assets/ui-detect.webp" aria-label="项目提供的肤质检测界面演示">
-            <source src="./assets/ui-state-demo.mp4" type="video/mp4">
-          </video>
-          <figcaption><span class="pulse-mark"></span> 项目 UI 状态动效 · 演示稿</figcaption>
-        </figure>
+    <!-- 02 -->
+    <section class="chapter chapter--left" id="skin" data-scene="scan" data-tone="dark" aria-labelledby="skin-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">02 — 靠近，识肤开始</p>
+        <h2 id="skin-title">肌肤的状态，<br><span class="accent">值得被认真对待。</span></h2>
+        <p class="body-copy">镜头靠近屏幕，一道扫描光自上而下掠过。棉小柔把 AI 肤质识别放进用巾护理的起点，让选择不再只凭感觉。</p>
+        <p class="small-note">屏幕播放的是项目提供的 UI 设计稿动效；数值与建议尚未作为经验证的产品承诺。</p>
       </div>
+      <figure class="screen-card">
+        <img src="./assets/ui-detect.webp" alt="项目提供的肤质检测界面设计稿" loading="lazy">
+      </figure>
     </section>
 
-    <section class="chapter chapter--result" id="result" data-scene="result" aria-labelledby="result-title">
-      <div class="chapter__inner chapter__inner--result">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>02 / 09</span><i></i> 读懂状态</p>
-          <h2 id="result-title">从识别开始，<br><em>把护理放回日常。</em></h2>
-          <p class="body-copy">页面上的界面演示呈现的是项目 UI 稿里的状态流转。此处不增添数值或结论，让真实产品信息以正式获批版本为准。</p>
-        </div>
-        <ol class="state-sequence" aria-label="界面演示中的三个视觉阶段">
-          <li><span>01</span><div><b>开启识别</b><small>界面进入检测状态</small></div><i></i></li>
-          <li><span>02</span><div><b>查看呈现</b><small>以项目 UI 稿展示页面状态</small></div><i></i></li>
-          <li><span>03</span><div><b>回到日常</b><small>由产品团队确认最终内容</small></div></li>
+    <!-- 03 -->
+    <section class="chapter chapter--left" id="result" data-scene="result" data-tone="dark" aria-labelledby="result-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">03 — 读懂状态</p>
+        <h2 id="result-title">从识别开始，<br><span class="accent">把护理放回日常。</span></h2>
+        <ol class="state-sequence">
+          <li><span>01</span><b>开启识别</b><small>界面进入检测状态</small></li>
+          <li><span>02</span><b>查看呈现</b><small>项目 UI 稿中的状态流转</small></li>
+          <li><span>03</span><b>回到日常</b><small>最终内容以获批版本为准</small></li>
         </ol>
-        <p class="result-caption">界面内容为项目演示素材，不作为已获批的检测结果、健康建议或效果承诺。</p>
       </div>
     </section>
 
-    <section class="chapter chapter--structure" id="structure" data-scene="structure" aria-labelledby="structure-title">
-      <div class="chapter__inner chapter__inner--structure">
-        <div class="copy copy--structure">
-          <p class="eyebrow"><span>03 / 09</span><i></i> 产品结构展开</p>
-          <h2 id="structure-title">让一台设备，<br><em>看得见它的层次。</em></h2>
-          <p class="body-copy">沿着镜头绕行，产品模型逐层展开。屏幕、摄像头、上盖与底部总成的标注跟随真实模型节点移动。</p>
-          <p class="small-note">CAD 分件与位移为网页视觉预演；盖板轴心、抽屉行程及内部装配关系未经工程验证，不代表实机动作或操作方式。</p>
-          <span class="pill">结构展示 · 视觉预演</span>
-        </div>
-        <div class="structure-aside" aria-label="分件结构说明">
-          <span class="structure-aside__index">MODEL STUDY / 03</span>
-          <span class="structure-aside__rule"></span>
-          <p>镜头沿空间转向<br>分件轻轻离开原位<br>再回到产品轮廓</p>
-          <span class="structure-aside__caption">项目 Blender 模型 · 仅作视觉对位参考</span>
-        </div>
+    <!-- 04 -->
+    <section class="chapter chapter--left" id="structure" data-scene="structure" data-tone="light" aria-labelledby="structure-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">04 — 结构展开</p>
+        <h2 id="structure-title">让一台设备，<br><span class="accent">看得见它的层次。</span></h2>
+        <p class="body-copy">外壳化作半透明，上盖、屏幕、摄像头与电路板沿各自方向轻轻离开原位，再回到完整的轮廓。</p>
+        <p class="small-note">CAD 分件位移为网页视觉预演，不代表实机装配、轴心或动作。</p>
+        <span class="tag">X-RAY · MODEL STUDY</span>
       </div>
     </section>
 
-    <section class="chapter chapter--towel" id="towel" data-scene="towel" aria-labelledby="towel-title">
-      <div class="chapter__inner chapter__inner--split chapter__inner--towel">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>04 / 09</span><i></i> 压缩毛巾遇水舒展</p>
-          <h2 id="towel-title">遇水舒展，<br><em>把柔软还给触感。</em></h2>
-          <p class="body-copy">一枚压缩毛巾，在水的触碰下慢慢舒展。跟随页面滚动，看它从紧实到蓬松的变化；水滴与涟漪只为这段过程添一层空间感。</p>
-          <a class="text-link" href="#drawer">继续看送达预演 <span aria-hidden="true">↗</span></a>
-        </div>
+    <!-- 05 -->
+    <section class="chapter chapter--right" id="towel" data-scene="towel" data-tone="light" aria-labelledby="towel-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">05 — 遇水舒展</p>
+        <h2 id="towel-title">遇水舒展，<br><span class="accent">把柔软还给触感。</span></h2>
+        <p class="body-copy">一枚压缩毛巾，在水的触碰下慢慢舒展。滚动页面，看它从紧实到蓬松。</p>
         <figure class="towel-card">
-          <div class="towel-card__label"><span>04 / 09</span><span>PRESS · WATER · OPEN · SOFT</span></div>
-          <video class="towel-card__video" data-scrub preload="none" muted playsinline controls poster="./assets/foreground-05.webp" aria-label="压缩毛巾遇水并逐渐舒展的短片">
+          <video class="towel-card__video" data-scrub preload="none" muted playsinline poster="./assets/foreground-06.webp" aria-label="压缩毛巾遇水并逐渐舒展的短片">
             <source src="./assets/towel-transform.mp4" type="video/mp4">
           </video>
-          <figcaption>压缩 <i></i> 遇水 <i></i> 舒展 <i></i> 柔软时刻</figcaption>
+          <figcaption>压缩 <i></i> 遇水 <i></i> 舒展 <i></i> 柔软</figcaption>
         </figure>
       </div>
     </section>
 
-    <section class="chapter chapter--drawer" id="drawer" data-scene="drawer" aria-labelledby="drawer-title">
-      <div class="chapter__inner chapter__inner--drawer">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>05 / 09</span><i></i> 抽屉送达 · 视觉预演</p>
-          <h2 id="drawer-title">柔软的准备，<br><em>向手边靠近。</em></h2>
-          <p class="body-copy">镜头下沉，产品下部的模型分件作一段有限位移，演示“送达”的视觉节奏。它是由项目模型临时向量驱动的网页预演，不代表已测量的实机出仓路径。</p>
-          <p class="small-note">实际动作、轴心、行程和交互方式需由产品与工程团队确认后再对外表达。</p>
-          <span class="pill">非实机动作 · 待工程确认</span>
-        </div>
-        <div class="drawer-orbit" aria-hidden="true"><span></span><i></i><b>PREVIEW VECTOR</b></div>
+    <!-- 06 -->
+    <section class="chapter chapter--left" id="drawer" data-scene="drawer" data-tone="light" aria-labelledby="drawer-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">06 — 送达 · 视觉预演</p>
+        <h2 id="drawer-title">柔软的准备，<br><span class="accent">向手边靠近。</span></h2>
+        <p class="body-copy">镜头下沉，底部总成向前滑出一段，演示“送达”的节奏。</p>
+        <p class="small-note">由项目模型临时向量驱动，实际行程与交互需工程确认。</p>
       </div>
     </section>
 
-    <section class="chapter chapter--ritual" id="ritual" data-scene="ritual" aria-labelledby="ritual-title">
-      <div class="chapter__inner chapter__inner--split">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>06 / 09</span><i></i> 回到清晨日常</p>
-          <h2 id="ritual-title">把贴心，放进<br><em>日常用巾的每一步。</em></h2>
-          <p class="body-copy">回到同一处清晨梳妆台：先了解肌肤状态，再取用准备好的毛巾。智能设备不必抢走生活的主角，只让熟悉的护理，多一份从容。</p>
-          <div class="ritual-tags"><span>清晨护理</span><span>智能便捷</span><span>柔软相伴</span></div>
-        </div>
-        <figure class="ritual-still">
-          <img src="./assets/foreground-05.webp" alt="项目制作的折叠面巾透明素材" loading="lazy">
-          <figcaption><span>ONE MORNING</span><span>一处清晨 · 回到日常</span></figcaption>
-        </figure>
+    <!-- 07 -->
+    <section class="chapter chapter--left chapter--ritual" id="ritual" data-scene="ritual" data-tone="light" aria-labelledby="ritual-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">07 — 回到日常</p>
+        <h2 id="ritual-title">把贴心，放进<br><span class="accent">用巾的每一步。</span></h2>
+        <p class="body-copy">回到同一处清晨梳妆台。智能设备不必抢走生活的主角，只让熟悉的护理，多一份从容。</p>
+      </div>
+      <div class="gallery" data-reveal>
+        <figure><img src="./assets/gallery-morning.webp" alt="清晨使用棉小柔的场景" loading="lazy"><figcaption><span>MORNING</span>清晨</figcaption></figure>
+        <figure><img src="./assets/gallery-noon.webp" alt="午间使用棉小柔的场景" loading="lazy"><figcaption><span>NOON</span>午间</figcaption></figure>
+        <figure><img src="./assets/gallery-evening.webp" alt="夜晚使用棉小柔的场景" loading="lazy"><figcaption><span>NIGHT</span>夜晚</figcaption></figure>
       </div>
     </section>
 
-    <section class="chapter chapter--texture" id="texture" data-scene="texture" aria-labelledby="texture-title">
-      <div class="chapter__inner chapter__inner--texture">
-        <div class="copy copy--narrow">
-          <p class="eyebrow"><span>07 / 09</span><i></i> 触感与细节回环</p>
-          <h2 id="texture-title">科技留在产品里，<br><em>柔软回到触感中。</em></h2>
-          <p class="body-copy">镜头从产品轮廓移向毛巾与纤维层，再沿着一缕晨光回到识肤的起点。把技术藏进日常，让画面停留在柔软、洁净与从容。</p>
-          <p class="small-note">本章为视觉叙事，不新增面料成分、克重、抑菌或功效等未经确认的技术指标。</p>
-        </div>
-        <div class="texture-stamps" aria-hidden="true">
-          <span class="texture-stamp texture-stamp--one">SOFT<br>RITUAL</span>
-          <span class="texture-stamp texture-stamp--two">COTTON<br>TOUCH</span>
-          <span class="texture-stamp__line"></span>
-        </div>
+    <!-- 08 -->
+    <section class="chapter chapter--left" id="texture" data-scene="texture" data-tone="light" aria-labelledby="texture-title">
+      <div class="copy" data-reveal>
+        <p class="chapter-no">08 — 触感</p>
+        <h2 id="texture-title">科技留在产品里，<br><span class="accent">柔软回到触感中。</span></h2>
+        <p class="body-copy">镜头远去，晨光里的棉絮缓缓浮起。把技术藏进日常，让画面停在柔软、洁净与从容。</p>
+        <p class="small-note">本章为视觉叙事，不新增面料成分、克重或功效类指标。</p>
       </div>
     </section>
 
-    <section class="chapter chapter--closing" id="closing" data-scene="closing" aria-labelledby="closing-title">
-      <div class="closing-lockup">
+    <!-- 09 -->
+    <section class="chapter chapter--closing" id="closing" data-scene="closing" data-tone="light" aria-labelledby="closing-title">
+      <div class="closing-lockup" data-reveal>
+        <p class="kicker">FINALE · 柔软科技</p>
+        <h2 id="closing-title">让每一次用巾，<br><span class="accent">都更懂肌肤。</span></h2>
+        <a class="button" href="#skin">重温识肤旅程 <span aria-hidden="true">↑</span></a>
+      </div>
+      <ol class="chapter-cards" data-reveal>
+        <li><a href="#skin"><span>02</span><b>识肤</b><small>扫描光掠过屏幕</small></a></li>
+        <li><a href="#structure"><span>04</span><b>结构</b><small>X 光下的层次</small></a></li>
+        <li><a href="#towel"><span>05</span><b>遇水</b><small>从紧实到蓬松</small></a></li>
+        <li><a href="#drawer"><span>06</span><b>送达</b><small>向手边靠近</small></a></li>
+        <li><a href="#ritual"><span>07</span><b>日常</b><small>早 · 中 · 晚</small></a></li>
+        <li><a href="#texture"><span>08</span><b>触感</b><small>晨光里的棉絮</small></a></li>
+      </ol>
+      <footer class="site-footer">
         <img src="./assets/brand-logo.webp" alt="棉小柔">
-        <p class="eyebrow">柔软科技 · 日常护理</p>
-        <h2 id="closing-title">让每一次用巾，<br><em>都更懂肌肤。</em></h2>
-        <p class="body-copy">棉小柔智能肤质毛巾机<br>从看见肌肤，到回到柔软日常。</p>
-        <a class="button button--dark" href="#skin">了解产品体验 <span aria-hidden="true">↑</span></a>
-      </div>
-      <img class="closing-tray" src="./assets/foreground-09.webp" alt="" loading="lazy" aria-hidden="true">
+        <span>棉小柔 · 官网交互预览</span>
+        <span>UI 与结构动效为演示素材；正式对外前需完成品牌、合规与工程确认。</span>
+      </footer>
     </section>
   </main>
-
-  <div class="story-progress" aria-hidden="true"><span id="progressFill"></span></div>
-  <footer class="site-footer">
-    <span>棉小柔 · 官网交互预览</span>
-    <span>项目 UI 与结构动效为演示素材；正式对外前需完成品牌、合规与工程确认。</span>
-  </footer>
-  <noscript><p class="noscript-note">页面的文字、图片与章节导航仍可浏览；滚动联动的 3D 镜头需要开启 JavaScript。</p></noscript>
+  <noscript><p class="noscript-note">页面文字与图片可正常浏览；滚动联动的 3D 镜头需要开启 JavaScript。</p></noscript>
 </body>
 </html>

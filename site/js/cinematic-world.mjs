@@ -1,524 +1,718 @@
 import { clamp, smoothstep } from './scroll-timeline.mjs';
 
-const STAGES = [
-  { id: 'intro', background: 'morning-vanity.webp', mood: 'dawn', layers: ['foreground-01.webp', 'foreground-02.webp', 'foreground-03.webp', 'foreground-04.webp', 'foreground-10.webp'], camera: [-0.45, 0.28, 8.0], look: [1.9, 0.0, 0], model: [1.9, -0.02, 0], yaw: -0.2, scale: 1.0 },
-  { id: 'scan', background: 'warmwhite-stage.webp', mood: 'scan', layers: ['foreground-07.webp', 'foreground-10.webp'], camera: [0.2, 0.18, 5.5], look: [1.9, 0.05, 0], model: [1.9, 0, 0], yaw: 0.02, scale: 1.02 },
-  { id: 'result', background: 'warmwhite-stage.webp', mood: 'result', layers: ['foreground-08.webp', 'foreground-10.webp'], camera: [2.7, 0.35, 5.25], look: [1.9, 0.12, 0], model: [1.9, 0.02, 0], yaw: 0.14, scale: 1.03 },
-  { id: 'structure', background: 'warmwhite-stage.webp', mood: 'structure', layers: ['foreground-04.webp', 'foreground-08.webp'], camera: [-1.05, 0.5, 7.4], look: [1.9, 0.0, 0], model: [1.9, 0, 0], yaw: 0.3, scale: 1.03 },
-  { id: 'towel', background: 'warmwhite-stage.webp', mood: 'water', layers: ['foreground-05.webp', 'foreground-06.webp', 'foreground-07.webp', 'foreground-08.webp', 'foreground-09.webp'], camera: [0.9, -0.58, 6.2], look: [1.9, -0.38, 0], model: [1.9, -0.06, 0], yaw: 0.08, scale: 0.96 },
-  { id: 'drawer', background: 'warmwhite-stage.webp', mood: 'drawer', layers: ['foreground-04.webp', 'foreground-05.webp', 'foreground-07.webp'], camera: [0.2, -0.55, 4.8], look: [1.95, -0.55, 0], model: [1.9, -0.02, 0], yaw: 0.05, scale: 1.04 },
-  { id: 'ritual', background: 'morning-vanity.webp', mood: 'dawn', layers: ['foreground-01.webp', 'foreground-02.webp', 'foreground-03.webp', 'foreground-04.webp', 'foreground-05.webp', 'foreground-10.webp'], camera: [-0.7, 0.34, 7.8], look: [1.9, 0.0, 0], model: [1.9, 0, 0], yaw: -0.18, scale: 0.98 },
-  { id: 'texture', background: 'warmwhite-stage.webp', mood: 'fiber', layers: ['foreground-05.webp', 'foreground-08.webp', 'foreground-10.webp'], camera: [1.2, 0.16, 5.15], look: [1.9, 0.08, 0], model: [1.9, 0.02, 0], yaw: 0.17, scale: 1.0 },
-  { id: 'closing', background: 'warmwhite-stage.webp', mood: 'halo', layers: ['foreground-04.webp', 'foreground-09.webp', 'foreground-10.webp'], camera: [-0.35, 0.42, 8.2], look: [1.9, 0.0, 0], model: [1.9, -0.02, 0], yaw: 0.02, scale: 1.0 },
-];
+/*
+ * 棉小柔 cinematic stage (v2).
+ * One persistent product in one world; the camera orbits/dollies along chapter keyframes.
+ * Each chapter owns a background plate, camera-space foreground layers and local effects.
+ * CAD part motion is a visual preview only — not a verified hinge, axis or drawer stroke.
+ */
 
-const LAYER_POSE = {
-  'foreground-01.webp': [-4.25, 0.2, 1.15, 7.2, 0.72],
-  'foreground-02.webp': [4.2, 1.35, 0.75, 4.7, 0.64],
-  'foreground-03.webp': [4.35, -1.15, 1.45, 2.4, 0.58],
-  'foreground-04.webp': [0.2, -2.35, 1.25, 4.7, 0.5],
-  'foreground-05.webp': [3.0, -1.0, 1.55, 2.0, 0.68],
-  'foreground-06.webp': [3.65, 0.5, 1.3, 1.65, 0.7],
-  'foreground-07.webp': [-3.55, 1.05, 1.25, 1.9, 0.62],
-  'foreground-08.webp': [2.7, 0.9, 1.7, 3.4, 0.48],
-  'foreground-09.webp': [3.75, -1.55, 1.4, 2.25, 0.53],
-  'foreground-10.webp': [-1.15, 1.85, -1.5, 6.0, 0.52],
+const BG_FILES = {
+  hero: 'bg-hero.webp', scan: 'bg-scan.webp', structure: 'bg-structure.webp',
+  water: 'bg-water.webp', texture: 'bg-texture.webp', closing: 'bg-closing.webp',
 };
 
-// CSV values are preliminary visual offsets. Blender Z-up is mapped to Three.js Y-up;
-// this animation is not a verified assembly, hinge axis, or operating stroke.
-const PARTS = [
-  { name: 'FACE-TOWEL-ROTATING-COVERA_ASM__ASM', delta: [0, 0.045, 0] },
-  { name: 'FACE-TOWEL-LCD_24', delta: [0, 0, 0.040] },
-  { name: 'FACE-TOWEL-CAMERA-ASS_ASM_60_ASM', delta: [0, 0, 0.055] },
-  { name: 'FACE-TOWEL-SLIDING-COVER-ASS_AS_ASM', delta: [0, 0, 0.065] },
-  { name: 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM', delta: [0, 0, 0.085] },
-  { name: 'HIGH-VOLTAGE-BOARD-PCBA_19', delta: [0.050, 0, 0] },
-  { name: 'RAPID-HEAT-PIPE-BRACKET_ASM_60_ASM', delta: [-0.055, 0, 0] },
-  { name: 'FACE-TOWEL-BOTTOM-COVER_ASM_27_ASM', delta: [0, -0.055, 0] },
+// x/y: fraction of half-frame at that depth; d: distance from camera; h: height as fraction of frame height
+const FG_LAYERS = {
+  blinds: { file: 'fg-blinds-light.webp', x: -0.25, y: 0.2, d: 3.4, h: 1.25, opacity: 0.75, drift: -0.18, additive: true },
+  branch: { file: 'fg-branch-blur.webp', x: -0.78, y: 0.5, d: 2.2, h: 0.62, opacity: 1, drift: -0.55 },
+  curtain: { file: 'foreground-01.webp', x: 0.93, y: 0.0, d: 2.6, h: 1.25, opacity: 0.7, drift: -0.35 },
+  sprig: { file: 'foreground-02.webp', x: 0.88, y: -0.62, d: 2.4, h: 0.55, opacity: 0.95, drift: -0.5 },
+  droplets: { file: 'foreground-07.webp', x: -0.62, y: 0.35, d: 2.8, h: 0.5, opacity: 0.85, drift: -0.4 },
+  fiber: { file: 'foreground-08.webp', x: 0.55, y: 0.4, d: 2.6, h: 0.75, opacity: 0.7, drift: -0.45 },
+  bokeh: { file: 'foreground-10.webp', x: 0.1, y: 0.45, d: 3.6, h: 1.0, opacity: 0.55, drift: -0.2, additive: true },
+  towel: { file: 'foreground-05.webp', x: -0.82, y: -0.72, d: 2.5, h: 0.48, opacity: 1, drift: -0.5 },
+};
+
+// Camera keyframes. az: orbit angle (rad, + = camera right of product front); el: elevation;
+// dist: distance; ty: look target height offset; ox: horizontal frame offset (+ pushes product right).
+const CHAPTERS = [
+  { id: 'intro', bg: 'hero', fg: ['blinds', 'branch', 'sprig'], az: 0.72, el: 0.07, dist: 10.6, ty: 0.15, ox: 0.14, pan: -0.04, word: 1, light: 'warm' },
+  { id: 'scan', bg: 'scan', fg: ['bokeh'], az: 0.16, el: 0.03, dist: 5.6, ty: 0.42, ox: 0.2, pan: 0, scan: 1, screen: 1, light: 'cool' },
+  { id: 'result', bg: 'scan', fg: ['bokeh'], az: -0.3, el: 0.1, dist: 6.6, ty: 0.32, ox: 0.22, pan: 0.03, screen: 1, light: 'cool' },
+  { id: 'structure', bg: 'structure', fg: [], az: 0.95, el: 0.3, dist: 13.2, ty: 0.25, ox: 0.18, pan: 0, explode: 1, xray: 1, light: 'studio' },
+  { id: 'towel', bg: 'water', fg: ['droplets', 'branch'], az: 0.55, el: -0.02, dist: 11.5, ty: -0.1, ox: -0.22, pan: 0.04, ripple: 1, light: 'warm' },
+  { id: 'drawer', bg: 'structure', fg: [], az: 0.42, el: 0.04, dist: 8.4, ty: -0.35, ox: 0.18, pan: 0, drawer: 1, light: 'studio' },
+  { id: 'ritual', bg: 'hero', fg: ['blinds', 'sprig', 'towel'], az: -0.5, el: 0.08, dist: 9.6, ty: 0.12, ox: 0.2, pan: 0.06, light: 'warm' },
+  { id: 'texture', bg: 'texture', fg: ['fiber', 'bokeh'], az: 0.8, el: 0.12, dist: 12.5, ty: 0.1, ox: 0.28, pan: -0.05, fibers: 1, light: 'warm' },
+  { id: 'closing', bg: 'closing', fg: ['bokeh'], az: 0.32, el: 0.16, dist: 13.0, ty: 1.0, ox: 0.0, pan: 0, halo: 1, light: 'gold' },
 ];
 
-const STAGE_SPACING = 6.6;
-const clamp01 = (value) => clamp(value, 0, 1);
+const LIGHTS = {
+  warm: { key: [1.0, 0.9, 0.76], keyI: 1.7, rim: [0.75, 0.88, 1.0], rimI: 1.1, env: 0.42 },
+  cool: { key: [0.92, 0.96, 1.0], keyI: 1.2, rim: [0.45, 0.85, 1.0], rimI: 2.2, env: 0.32 },
+  studio: { key: [1.0, 0.99, 0.97], keyI: 1.6, rim: [0.7, 0.9, 1.0], rimI: 1.3, env: 0.5 },
+  gold: { key: [1.0, 0.86, 0.66], keyI: 1.7, rim: [1.0, 0.9, 0.7], rimI: 1.6, env: 0.45 },
+};
 
-function makeDotTexture(THREE) {
+// Preliminary visual offsets in glTF metres (Y-up). Not engineering data.
+const PARTS = [
+  { name: 'FACE-TOWEL-ROTATING-COVERA_ASM__ASM', delta: [0, 0.07, 0] },
+  { name: 'FACE-TOWEL-LCD_24', delta: [0, 0, 0.06] },
+  { name: 'FACE-TOWEL-CAMERA-ASS_ASM_60_ASM', delta: [0, 0.04, 0.07] },
+  { name: 'FACE-TOWEL-SLIDING-COVER-ASS_AS_ASM', delta: [0, 0, 0.09] },
+  { name: 'HIGH-VOLTAGE-BOARD-PCBA_19', delta: [0.08, 0, 0] },
+  { name: 'RAPID-HEAT-PIPE-BRACKET_ASM_60_ASM', delta: [-0.08, 0, 0] },
+  { name: 'FACE-TOWEL-BOTTOM-COVER_ASM_27_ASM', delta: [0, -0.06, 0] },
+];
+const DRAWER_PART = { name: 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM', delta: [0, 0, 0.11] };
+
+const PRODUCT_HEIGHT = 2.5; // world units
+const ease = (t) => t * t * (3 - 2 * t);
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function classify(object) {
+  let node = object;
+  while (node) {
+    const name = (node.name || '').toUpperCase();
+    if (name.includes('WINDOW-PMMA')) return 'window';
+    if (name.includes('PCBA') || name.includes('BOARD') || name.includes('PUMP') || name.includes('MOTOR') ||
+      name.includes('VALVE') || name.includes('HEAT') || name.includes('PIPE') || name.includes('BRACKET') ||
+      name.includes('BOTTLE') || name.includes('CYLINDER') || name.includes('SHAFT') || name.includes('JSB') ||
+      name.includes('MANIFOLD') || name.includes('MAGNETIC') || name.includes('WATER-BLOCK') || name.includes('SHOWER')) return 'internal';
+    if (name.includes('SILICONE') || name.includes('ILICONE') || name.includes('DUST-PROOF')) return 'silicone';
+    if (name.startsWith('FACE-TOWEL-LCD_24')) return 'screen';
+    if (name.includes('CAMERA')) return 'camera';
+    if (name.includes('CASE') || name.includes('COVER') || name.includes('DECO') || name.includes('GAI') || name.includes('SLIDING')) return 'shell';
+    node = node.parent;
+  }
+  return 'shell';
+}
+
+function canvasTexture(THREE, width, height, draw) {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 32;
-  const context = canvas.getContext('2d');
-  const gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15);
-  gradient.addColorStop(0, 'rgba(255,255,255,1)');
-  gradient.addColorStop(0.35, 'rgba(255,255,255,.86)');
-  gradient.addColorStop(1, 'rgba(255,255,255,0)');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, 32, 32);
+  canvas.width = width;
+  canvas.height = height;
+  draw(canvas.getContext('2d'), width, height);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-function seeded(seed) {
-  let value = seed >>> 0;
-  return () => {
-    value = (value * 1664525 + 1013904223) >>> 0;
-    return value / 4294967296;
+function dotTexture(THREE) {
+  return canvasTexture(THREE, 64, 64, (ctx) => {
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 31);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.3, 'rgba(255,255,255,.7)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+  });
+}
+
+function contactShadowTexture(THREE) {
+  return canvasTexture(THREE, 256, 256, (ctx) => {
+    const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, 'rgba(20,16,12,.85)');
+    g.addColorStop(0.45, 'rgba(20,16,12,.35)');
+    g.addColorStop(1, 'rgba(20,16,12,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 256);
+  });
+}
+
+// Engraved circuit-line pattern seen on the long side of the real product.
+function circuitTexture(THREE) {
+  return canvasTexture(THREE, 1024, 860, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    const groove = (points, offset) => {
+      ctx.beginPath();
+      points.forEach(([x, y], i) => (i ? ctx.lineTo(x * w, y * h + offset) : ctx.moveTo(x * w, y * h + offset)));
+      ctx.stroke();
+    };
+    const paths = [
+      [[0.06, 0.04], [0.06, 0.6], [0.16, 0.72], [0.16, 0.98]],
+      [[0.1, 0.04], [0.1, 0.56], [0.2, 0.68], [0.2, 0.98]],
+      [[0.14, 0.04], [0.14, 0.5], [0.26, 0.64], [0.26, 0.98]],
+      [[0.36, 0.0], [0.36, 0.3], [0.5, 0.46], [0.5, 0.98]],
+      [[0.41, 0.0], [0.41, 0.27], [0.55, 0.43], [0.55, 0.98]],
+      [[0.94, 0.12], [0.72, 0.38], [0.72, 0.62], [0.94, 0.88]],
+      [[0.98, 0.18], [0.78, 0.4], [0.78, 0.6], [0.98, 0.82]],
+      [[0.62, 0.0], [0.62, 0.18], [0.7, 0.26]],
+    ];
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(70,72,74,.28)';
+    paths.forEach((p) => groove(p, 0));
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    paths.forEach((p) => groove(p, 3));
+  });
+}
+
+function wordmarkTexture(THREE, text) {
+  return canvasTexture(THREE, 2400, 760, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(24,32,38,1)';
+    ctx.font = '300 620px "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const letters = [...text];
+    const step = w / letters.length;
+    letters.forEach((letter, i) => ctx.fillText(letter, step * (i + 0.5), h * 0.52));
+  });
+}
+
+function makeGradeShader() {
+  return {
+    uniforms: {
+      tDiffuse: { value: null },
+      uTime: { value: 0 },
+      uVignette: { value: 0.32 },
+      uGrain: { value: 0.035 },
+      uWarm: { value: 0.0 },
+    },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: `
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uVignette; uniform float uGrain; uniform float uWarm;
+      varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+      void main(){
+        vec4 c = texture2D(tDiffuse, vUv);
+        vec3 col = c.rgb;
+        col = mix(col, col*col*(3.0-2.0*col), 0.28);
+        col *= mix(vec3(1.0), vec3(1.04,1.0,0.94), uWarm);
+        vec2 d = vUv - 0.5; float v = 1.0 - dot(d, d) * 3.2 * uVignette;
+        col *= clamp(v, 0.0, 1.0);
+        col += (hash(vUv * 1024.0 + uTime) - 0.5) * uGrain;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
   };
 }
 
-function addTracked(stage, object, opacity) {
-  const material = object.material;
-  if (material) {
-    material.transparent = true;
-    material.depthWrite = false;
-    material.opacity = opacity;
-    stage.faders.push({ material, opacity });
-  }
-  stage.root.add(object);
-  return object;
-}
-
-function imagePlane(THREE, texture, pose) {
-  if (!texture) return null;
-  const [x, y, z, height, opacity] = pose;
-  const aspect = (texture.image?.width || 1) / Math.max(1, texture.image?.height || 1);
-  const geometry = new THREE.PlaneGeometry(aspect, 1);
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    opacity,
-    alphaTest: 0.015,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    toneMapped: false,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(x, y, z);
-  mesh.scale.set(height, height, 1);
-  mesh.renderOrder = z > 0 ? 4 : -4;
-  return mesh;
-}
-
-function makeParticles(THREE, stage, dotTexture, count, color, seedValue, size) {
-  const random = seeded(seedValue);
-  const positions = new Float32Array(count * 3);
-  for (let i = 0; i < count; i += 1) {
-    positions[i * 3] = (random() - 0.5) * 8.8;
-    positions[i * 3 + 1] = (random() - 0.5) * 5.0;
-    positions[i * 3 + 2] = (random() - 0.5) * 2.8;
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const material = new THREE.PointsMaterial({
-    color,
-    map: dotTexture,
-    size,
-    sizeAttenuation: true,
-    transparent: true,
-    opacity: 0.55,
-    alphaTest: 0.025,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const points = new THREE.Points(geometry, material);
-  points.position.set(0, 0, 0.35);
-  addTracked(stage, points, 0.55);
-  stage.rotors.push({ object: points, rate: 0.012 + random() * 0.012 });
-}
-
-function addLine(stage, THREE, points, color, opacity, radius = 0.006) {
-  const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point)));
-  const geometry = new THREE.TubeGeometry(curve, 48, radius, 5, false);
-  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
-  return addTracked(stage, new THREE.Mesh(geometry, material), opacity);
-}
-
-function createScanBeam(THREE, stage) {
-  const material = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    uniforms: { uProgress: { value: 0 }, uStrength: { value: 0 }, uStageWeight: { value: 1 } },
-    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `
-      varying vec2 vUv;
-      uniform float uProgress;
-      uniform float uStrength;
-      uniform float uStageWeight;
-      void main(){
-        float band=exp(-pow((vUv.y-uProgress)*34.0,2.0));
-        float halo=exp(-pow((vUv.y-uProgress)*7.0,2.0))*0.18;
-        float edge=smoothstep(0.0,0.18,vUv.x)*smoothstep(1.0,0.82,vUv.x);
-        float alpha=(band*0.34+halo)*edge*uStrength*uStageWeight;
-        gl_FragColor=vec4(0.36,0.78,0.97,alpha);
-      }`,
-  });
-  const beam = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 2.9), material);
-  beam.position.set(1.9, 0.05, 0.66);
-  addTracked(stage, beam, 1);
-  stage.scan = beam;
-}
-
-function createRing(THREE, stage, radius, color, opacity, y, horizontal = false) {
-  const geometry = new THREE.TorusGeometry(radius, 0.012, 8, 112);
-  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
-  const ring = new THREE.Mesh(geometry, material);
-  ring.position.set(1.9, y, -0.5);
-  if (horizontal) ring.rotation.x = Math.PI / 2;
-  addTracked(stage, ring, opacity);
-  stage.rings.push(ring);
-  return ring;
-}
-
-function makeWindowFrame(THREE, stage) {
-  const geometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(4.5, 4.9, 0.045));
-  const material = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false });
-  const frame = new THREE.LineSegments(geometry, material);
-  frame.position.set(-2.05, 0.25, -3.2);
-  addTracked(stage, frame, 0.4);
-  const barMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.24, depthWrite: false });
-  const vertical = new THREE.Mesh(new THREE.BoxGeometry(0.022, 4.85, 0.02), barMaterial);
-  vertical.position.set(-2.05, 0.25, -3.16);
-  addTracked(stage, vertical, 0.24);
-  const horizontalMaterial = barMaterial.clone();
-  const horizontal = new THREE.Mesh(new THREE.BoxGeometry(4.45, 0.022, 0.02), horizontalMaterial);
-  horizontal.position.set(-2.05, 0.25, -3.16);
-  addTracked(stage, horizontal, 0.24);
-}
-
-function createStage(THREE, definition, index, textures, dotTexture, particleCount) {
-  const stage = { id: definition.id, definition, index, root: new THREE.Group(), faders: [], rotors: [], rings: [], scan: null, weight: 0 };
-  stage.root.position.x = index * STAGE_SPACING;
-  stage.root.visible = false;
-  const backgroundTexture = textures[definition.background];
-  const aspect = (backgroundTexture?.image?.width || 16) / Math.max(1, backgroundTexture?.image?.height || 9);
-  const backgroundMaterial = new THREE.MeshBasicMaterial({
-    map: backgroundTexture || null,
-    color: backgroundTexture ? 0xffffff : (definition.mood === 'dawn' ? 0xf6f1e7 : 0xf1f5f5),
-    transparent: true,
-    opacity: 1,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    toneMapped: false,
-  });
-  const background = new THREE.Mesh(new THREE.PlaneGeometry(aspect, 1), backgroundMaterial);
-  background.scale.set(14.2, 14.2, 1);
-  background.position.set(0, 0.05, -8.6);
-  background.renderOrder = -10;
-  addTracked(stage, background, 1);
-
-  const floorMaterial = new THREE.MeshBasicMaterial({ color: definition.mood === 'scan' ? 0xe9f6fb : 0xf1ede4, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(13, 6), floorMaterial);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.set(0, -1.78, -0.3);
-  addTracked(stage, floor, 0.18);
-
-  for (const file of definition.layers) {
-    const pose = LAYER_POSE[file];
-    const mesh = imagePlane(THREE, textures[file], pose);
-    if (mesh) addTracked(stage, mesh, pose[4]);
-  }
-
-  if (definition.mood === 'dawn') makeWindowFrame(THREE, stage);
-  const accent = definition.mood === 'scan' || definition.mood === 'result' ? 0x91d9f1 : 0xb9d9e5;
-  const halo = new THREE.Mesh(
-    new THREE.TorusGeometry(definition.mood === 'halo' ? 1.9 : 1.55, definition.mood === 'halo' ? 0.018 : 0.01, 8, 128),
-    new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: definition.mood === 'halo' ? 0.42 : 0.24, depthWrite: false, blending: THREE.AdditiveBlending }),
-  );
-  halo.position.set(1.9, 0.05, -1.1);
-  addTracked(stage, halo, definition.mood === 'halo' ? 0.42 : 0.24);
-  stage.rotors.push({ object: halo, rate: definition.mood === 'scan' ? 0.045 : 0.012 });
-
-  if (definition.mood === 'scan' || definition.mood === 'result') createScanBeam(THREE, stage);
-
-  if (definition.mood === 'structure') {
-    const wireMaterial = new THREE.MeshBasicMaterial({ color: 0x8bb6c9, wireframe: true, transparent: true, opacity: 0.14, depthWrite: false });
-    const cage = new THREE.Mesh(new THREE.IcosahedronGeometry(2.05, 1), wireMaterial);
-    cage.position.set(1.9, 0.1, -1.15);
-    addTracked(stage, cage, 0.14);
-    stage.rotors.push({ object: cage, rate: 0.018 });
-  }
-
-  if (definition.mood === 'water' || definition.mood === 'drawer') {
-    for (let ringIndex = 0; ringIndex < 3; ringIndex += 1) {
-      createRing(THREE, stage, 0.62 + ringIndex * 0.5, ringIndex === 0 ? 0x8fdaf0 : 0xb9e6ee, 0.26 - ringIndex * 0.045, -1.58 + ringIndex * 0.006, true);
-    }
-    addLine(stage, THREE, [[-2.5, -0.8, 1.4], [-1.5, -0.25, 1.6], [0.2, -0.05, 1.4], [1.2, 0.15, 1.1]], 0xc2ebef, 0.23, 0.007);
-  }
-
-  if (definition.mood === 'fiber') {
-    addLine(stage, THREE, [[-1.4, -0.4, 0.7], [-0.6, 0.35, 1.0], [0.2, 0.15, 0.9], [1.1, 0.65, 1.25], [2.2, 0.4, 1.0]], 0xf6e4cb, 0.5, 0.009);
-    addLine(stage, THREE, [[-1.5, 0.8, -0.2], [-0.35, 0.45, 0.35], [0.5, -0.05, 0.2], [1.4, 0.18, 0.75], [2.5, 0.92, 0.4]], 0xc8e8ee, 0.42, 0.006);
-  }
-
-  if (definition.mood === 'halo') {
-    const plinthMaterial = new THREE.MeshBasicMaterial({ color: 0xf5f0e7, transparent: true, opacity: 0.72, depthWrite: false });
-    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.9, 0.18, 72), plinthMaterial);
-    plinth.position.set(1.9, -1.62, -0.05);
-    addTracked(stage, plinth, 0.72);
-  }
-
-  makeParticles(THREE, stage, dotTexture, particleCount, definition.mood === 'water' || definition.mood === 'scan' ? 0xc5f0ff : 0xfff6e8, 913 + index * 71, definition.mood === 'water' ? 0.085 : 0.065);
-  return stage;
-}
-
-function mapPosition(THREE, definition, index, key) {
-  const point = definition[key];
-  return new THREE.Vector3(point[0] + index * STAGE_SPACING, point[1], point[2]);
-}
-
 export async function createCinematicWorld({ canvas, onProgress = () => {}, onModelReady = () => {}, loadModel = true }) {
-  const [{ default: _unused, ...THREE }, { GLTFLoader }] = await Promise.all([
+  const [THREE, { GLTFLoader }, { DRACOLoader }, { RoomEnvironment }] = await Promise.all([
     import('three'),
     import('three/addons/loaders/GLTFLoader.js'),
+    import('three/addons/loaders/DRACOLoader.js'),
+    import('three/addons/environments/RoomEnvironment.js'),
   ]);
 
   const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency < 6) || (navigator.deviceMemory > 0 && navigator.deviceMemory <= 4);
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !lowPower, powerPreference: 'low-power' });
-  renderer.setClearColor(0x000000, 0);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower, powerPreference: 'high-performance' });
+  renderer.setClearColor(0xefe9df, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 0.92;
+  renderer.shadowMap.enabled = !lowPower;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xf6f4ef, 0.0045);
-  const camera = new THREE.PerspectiveCamera(38, Math.max(1, window.innerWidth) / Math.max(1, window.innerHeight), 0.1, 100);
-  const hemi = new THREE.HemisphereLight(0xf8fbff, 0xb8b8aa, 2.0);
-  scene.add(hemi);
-  const keyLight = new THREE.DirectionalLight(0xfff7e9, 2.25);
-  keyLight.position.set(-3.5, 5.5, 5.0);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.85;
+
+  const camera = new THREE.PerspectiveCamera(30, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 200);
+  scene.add(camera);
+
+  const keyLight = new THREE.DirectionalLight(0xfff1dc, 3.4);
+  keyLight.position.set(-5, 7, 5);
+  keyLight.castShadow = !lowPower;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  Object.assign(keyLight.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 25 });
+  keyLight.shadow.bias = -0.0004;
+  keyLight.shadow.normalBias = 0.02;
+  keyLight.shadow.radius = 4;
   scene.add(keyLight);
-  const rimLight = new THREE.DirectionalLight(0x9bdcf2, 1.4);
-  rimLight.position.set(2.5, 2.8, -2.8);
+  const rimLight = new THREE.DirectionalLight(0xbfe4ff, 1.6);
+  rimLight.position.set(5, 4, -6);
   scene.add(rimLight);
-  const fillLight = new THREE.DirectionalLight(0xffe4d0, 0.55);
-  fillLight.position.set(3, -1.5, 4.5);
-  scene.add(fillLight);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cbb8, 0.35));
 
   const manager = new THREE.LoadingManager();
-  manager.onProgress = (_url, loaded, total) => onProgress(total > 0 ? loaded / total : 0, '正在准备场景图层');
-  const textureLoader = new THREE.TextureLoader(manager);
-  const filenames = [...new Set([...STAGES.map((stage) => stage.background), ...Object.keys(LAYER_POSE)])];
-  const textures = {};
-  await Promise.all(filenames.map(async (file) => {
+  manager.onProgress = (_url, loaded, total) => onProgress(total ? (loaded / total) * 0.6 : 0, '正在铺设清晨的光');
+  const loader = new THREE.TextureLoader(manager);
+  const load = async (file) => {
     try {
-      const texture = await textureLoader.loadAsync(`./assets/${file}`);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      textures[file] = texture;
+      const t = await loader.loadAsync(`./assets/${file}`);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      return t;
     } catch (error) {
-      console.warn(`Scene layer unavailable: ${file}`, error);
-      textures[file] = null;
+      console.warn('Missing scene asset', file, error);
+      return null;
     }
-  }));
+  };
+  const bgTextures = {};
+  const fgTextures = {};
+  await Promise.all([
+    ...Object.entries(BG_FILES).map(async ([key, file]) => { bgTextures[key] = await load(file); }),
+    ...Object.entries(FG_LAYERS).map(async ([key, layer]) => { fgTextures[key] = await load(layer.file); }),
+  ]);
 
-  const dotTexture = makeDotTexture(THREE);
-  const particleCount = lowPower ? 16 : 44;
-  const stageInstances = STAGES.map((definition, index) => createStage(THREE, definition, index, textures, dotTexture, particleCount));
-  stageInstances.forEach((stage) => scene.add(stage.root));
+  // Background plates: camera-attached far planes, cover-fit, cross-faded, slow pan.
+  const BG_DISTANCE = 60;
+  const bgMeshes = {};
+  for (const [key, texture] of Object.entries(bgTextures)) {
+    if (!texture) continue;
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+    mesh.position.set(0, 0, -BG_DISTANCE);
+    mesh.renderOrder = -100;
+    mesh.frustumCulled = false;
+    mesh.visible = false;
+    camera.add(mesh);
+    bgMeshes[key] = { mesh, material, aspect: texture.image.width / texture.image.height };
+  }
 
-  const cameraPoints = STAGES.map((definition, index) => mapPosition(THREE, definition, index, 'camera'));
-  const lookPoints = STAGES.map((definition, index) => mapPosition(THREE, definition, index, 'look'));
-  const modelPoints = STAGES.map((definition, index) => mapPosition(THREE, definition, index, 'model'));
-  const cameraPath = new THREE.CatmullRomCurve3(cameraPoints, false, 'centripetal', 0.45);
-  const lookPath = new THREE.CatmullRomCurve3(lookPoints, false, 'centripetal', 0.45);
-  const modelPath = new THREE.CatmullRomCurve3(modelPoints, false, 'centripetal', 0.45);
-  const cameraNow = cameraPoints[0].clone();
-  const lookNow = lookPoints[0].clone();
-  camera.position.copy(cameraNow);
-  camera.lookAt(lookNow);
+  const fgMeshes = {};
+  for (const [key, layer] of Object.entries(FG_LAYERS)) {
+    const texture = fgTextures[key];
+    if (!texture) continue;
+    const material = new THREE.MeshBasicMaterial({
+      map: texture, transparent: true, opacity: 0, depthWrite: false, depthTest: false, toneMapped: false,
+      blending: layer.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    });
+    const aspect = texture.image.width / texture.image.height;
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(aspect, 1), material);
+    mesh.renderOrder = 50;
+    mesh.frustumCulled = false;
+    mesh.visible = false;
+    camera.add(mesh);
+    fgMeshes[key] = { mesh, material, layer };
+  }
 
-  let productRig = null;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.32 }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  ground.renderOrder = -5;
+  scene.add(ground);
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactShadowTexture(THREE), transparent: true, depthWrite: false, opacity: 0.75, toneMapped: false }));
+  contact.rotation.x = -Math.PI / 2;
+  contact.renderOrder = -4;
+  scene.add(contact);
+
+  const wordMaterial = new THREE.MeshBasicMaterial({ map: wordmarkTexture(THREE, '棉小柔'), transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+  const wordmark = new THREE.Mesh(new THREE.PlaneGeometry(2400 / 760, 1), wordMaterial);
+  wordmark.renderOrder = -10;
+  wordmark.visible = false;
+  scene.add(wordmark);
+
+  const dot = dotTexture(THREE);
+  const particleCount = lowPower ? 60 : 220;
+  const positions = new Float32Array(particleCount * 3);
+  const seeds = new Float32Array(particleCount);
+  let seed = 1234567;
+  const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  for (let i = 0; i < particleCount; i += 1) {
+    positions[i * 3] = (rand() - 0.5) * 9;
+    positions[i * 3 + 1] = (rand() - 0.5) * 5.5;
+    positions[i * 3 + 2] = -2.5 - rand() * 9;
+    seeds[i] = rand();
+  }
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMaterial = new THREE.PointsMaterial({ map: dot, size: 0.05, color: 0xfff1d8, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  particles.frustumCulled = false;
+  camera.add(particles);
+
+  const rig = new THREE.Group();
+  scene.add(rig);
+  const fx = new THREE.Group();
+  rig.add(fx);
+
+  const scanMaterial = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+    uniforms: { uProgress: { value: 0 }, uStrength: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: `varying vec2 vUv; uniform float uProgress; uniform float uStrength;
+      void main(){ float band=exp(-pow((vUv.y-uProgress)*30.0,2.0));
+      float trail=smoothstep(uProgress-0.35,uProgress,vUv.y)*step(vUv.y,uProgress)*0.18;
+      float edge=smoothstep(0.0,0.08,vUv.x)*smoothstep(1.0,0.92,vUv.x);
+      gl_FragColor=vec4(vec3(0.42,0.86,1.0)*(band*1.4+trail), (band+trail)*edge*uStrength); }`,
+  });
+  const scanBeam = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), scanMaterial);
+  scanBeam.visible = false;
+  scanBeam.renderOrder = 10;
+  fx.add(scanBeam);
+
+  const haloMaterial = new THREE.MeshBasicMaterial({ color: 0xffe2b0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.012, 12, 180), haloMaterial);
+  halo.visible = false;
+  fx.add(halo);
+  const ripples = [0, 1, 2].map((i) => {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.98, 1, 128), new THREE.MeshBasicMaterial({ color: 0x9fe3f5, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.userData.phase = i / 3;
+    m.visible = false;
+    fx.add(m);
+    return m;
+  });
+
+  // Real project UI animation on the product screen
+  const screenVideo = document.createElement('video');
+  screenVideo.src = './assets/ui-state-demo.mp4';
+  screenVideo.muted = true;
+  screenVideo.playsInline = true;
+  screenVideo.preload = 'auto';
+  const videoTexture = new THREE.VideoTexture(screenVideo);
+  videoTexture.colorSpace = THREE.SRGBColorSpace;
+  const posterTexture = await load('ui-detect.webp');
+  const screenMaterial = new THREE.MeshBasicMaterial({ map: posterTexture || videoTexture, toneMapped: false, color: 0xd8d8d8 });
+  let videoReady = false;
+  screenVideo.addEventListener('loadeddata', () => { videoReady = true; screenMaterial.map = videoTexture; screenMaterial.needsUpdate = true; }, { once: true });
+
+  let composer = null;
+  let gradePass = null;
+  let bloomPass = null;
+  if (!lowPower) {
+    try {
+      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { ShaderPass }, { OutputPass }] = await Promise.all([
+        import('three/addons/postprocessing/EffectComposer.js'),
+        import('three/addons/postprocessing/RenderPass.js'),
+        import('three/addons/postprocessing/UnrealBloomPass.js'),
+        import('three/addons/postprocessing/ShaderPass.js'),
+        import('three/addons/postprocessing/OutputPass.js'),
+      ]);
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.18, 0.45, 0.97);
+      composer.addPass(bloomPass);
+      composer.addPass(new OutputPass());
+      gradePass = new ShaderPass(makeGradeShader());
+      composer.addPass(gradePass);
+    } catch (error) {
+      console.warn('Post-processing unavailable; rendering directly.', error);
+      composer = null;
+    }
+  }
+
   let model = null;
-  let baseScale = 1;
   let modelReady = false;
-  let modelLoadPromise = null;
-  let explosionRecords = [];
+  let modelPromise = null;
+  let unit = 1;
+  const shellMaterials = [];
+  let internalMaterial = null;
+  let partRecords = [];
   let drawerRecord = null;
+  let screenPlane = null;
   const calloutNodes = [...document.querySelectorAll('[data-model-part]')];
   const calloutRoot = document.getElementById('structureCallouts');
 
-  function preparePartMotion() {
-    if (!model || !productRig) return;
-    model.updateMatrixWorld(true);
-    productRig.updateMatrixWorld(true);
-    const resolve = (part) => {
-      const object = model.getObjectByName(part.name);
-      if (!object?.parent) return null;
-      const parent = object.parent;
-      const base = object.position.clone();
-      const worldOrigin = object.getWorldPosition(new THREE.Vector3());
-      const worldDelta = new THREE.Vector3(...part.delta).multiplyScalar(baseScale);
-      const localBase = parent.worldToLocal(worldOrigin.clone());
-      const localTarget = parent.worldToLocal(worldOrigin.clone().add(worldDelta));
-      return { object, base, delta: localTarget.sub(localBase) };
+  function buildMaterials() {
+    internalMaterial = new THREE.MeshStandardMaterial({ color: 0xc9b48f, roughness: 0.35, metalness: 0.75, emissive: 0x3aa6c8, emissiveIntensity: 0 });
+    return {
+      shell: new THREE.MeshPhysicalMaterial({ color: 0xe6e3dd, roughness: 0.5, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.35, sheen: 0.2, sheenColor: new THREE.Color(0xffffff) }),
+      camera: new THREE.MeshPhysicalMaterial({ color: 0xb8bcc0, roughness: 0.28, metalness: 0.65, clearcoat: 0.6 }),
+      silicone: new THREE.MeshStandardMaterial({ color: 0xd9dbdc, roughness: 0.7 }),
+      window: new THREE.MeshPhysicalMaterial({ color: 0xcfe6ef, roughness: 0.08, transparent: true, opacity: 0.75, clearcoat: 1 }),
+      screen: new THREE.MeshPhysicalMaterial({ color: 0x15191c, roughness: 0.12, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }),
+      internal: internalMaterial,
     };
-    explosionRecords = PARTS.map(resolve).filter(Boolean);
-    drawerRecord = resolve(PARTS.find((part) => part.name === 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM'));
-    for (const element of calloutNodes) {
-      element._modelNode = model.getObjectByName(element.dataset.modelPart) || null;
-    }
   }
 
   function loadModelAsset() {
     if (!loadModel) return Promise.resolve(false);
     if (modelReady) return Promise.resolve(true);
-    if (modelLoadPromise) return modelLoadPromise;
-    modelLoadPromise = new Promise((resolve) => {
-      const loader = new GLTFLoader();
-      loader.load('./assets/mxr-test-export.glb', (gltf) => {
+    if (modelPromise) return modelPromise;
+    modelPromise = new Promise((resolve) => {
+      const draco = new DRACOLoader();
+      draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/');
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.setDRACOLoader(draco);
+      gltfLoader.load('./assets/mxr-product.glb', (gltf) => {
         model = gltf.scene;
+        const materials = buildMaterials();
+        model.traverse((object) => {
+          if (!object.isMesh) return;
+          const kind = classify(object);
+          object.material = kind === 'shell' ? materials.shell.clone() : materials[kind];
+          if (kind === 'shell') shellMaterials.push(object.material);
+          object.castShadow = kind === 'shell' || kind === 'camera';
+          object.receiveShadow = kind === 'shell';
+        });
+
         const bounds = new THREE.Box3().setFromObject(model);
         const size = bounds.getSize(new THREE.Vector3());
         const center = bounds.getCenter(new THREE.Vector3());
-        const largestDimension = Math.max(size.x, size.y, size.z, 0.01);
-        baseScale = 3.0 / largestDimension;
-        model.position.sub(center);
-        model.scale.setScalar(baseScale);
-        productRig = new THREE.Group();
-        productRig.add(model);
-        scene.add(productRig);
-        preparePartMotion();
+        unit = PRODUCT_HEIGHT / Math.max(0.001, size.y);
+        const pivot = new THREE.Group();
+        pivot.scale.setScalar(unit);
+        pivot.position.set(-center.x * unit, -bounds.min.y * unit, -center.z * unit);
+        pivot.add(model);
+        rig.add(pivot);
+        rig.updateMatrixWorld(true);
+
+        const lcd = model.getObjectByName('FACE-TOWEL-LCD_24');
+        if (lcd) {
+          const box = new THREE.Box3().setFromObject(lcd);
+          const s = box.getSize(new THREE.Vector3());
+          const c = box.getCenter(new THREE.Vector3());
+          screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(s.x * 0.94, s.y * 0.94), screenMaterial);
+          screenPlane.position.set(c.x, c.y, box.max.z + 0.004);
+          scene.add(screenPlane);
+          lcd.attach(screenPlane);
+        }
+        const caseNode = model.getObjectByName('FACE-TOWEL-CASE_444');
+        const body = new THREE.Box3().setFromObject(caseNode || model);
+        const bs = body.getSize(new THREE.Vector3());
+        const decalMaterial = new THREE.MeshStandardMaterial({ map: circuitTexture(THREE), transparent: true, depthWrite: false, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 });
+        const decal = new THREE.Mesh(new THREE.PlaneGeometry(bs.z * 0.92, bs.y * 0.82), decalMaterial);
+        decal.rotation.y = Math.PI / 2;
+        decal.position.set(body.max.x + 0.004, body.min.y + bs.y * 0.46, body.min.z + bs.z * 0.5);
+        scene.add(decal);
+        (caseNode || pivot).attach(decal);
+        shellMaterials.push(decalMaterial);
+
+        const productBox = new THREE.Box3().setFromObject(pivot);
+        const ps = productBox.getSize(new THREE.Vector3());
+        scanBeam.scale.set(ps.x * 1.25, ps.y * 1.05, 1);
+        scanBeam.position.set(0, ps.y * 0.52, productBox.max.z + 0.05);
+        halo.position.set(0, ps.y * 0.55, productBox.min.z - 0.6);
+        contact.scale.set(ps.x * 2.6, ps.z * 1.6, 1);
+        contact.position.set(0, 0.002, (productBox.min.z + productBox.max.z) / 2);
+
+        const recordFor = (part) => {
+          const object = part && model.getObjectByName(part.name);
+          if (!object?.parent) return null;
+          const worldDelta = new THREE.Vector3(...part.delta).multiplyScalar(unit);
+          const origin = object.getWorldPosition(new THREE.Vector3());
+          const a = object.parent.worldToLocal(origin.clone());
+          const b = object.parent.worldToLocal(origin.clone().add(worldDelta));
+          return { object, base: object.position.clone(), delta: b.sub(a) };
+        };
+        partRecords = PARTS.map(recordFor).filter(Boolean);
+        drawerRecord = recordFor(DRAWER_PART);
+        for (const element of calloutNodes) element._node = model.getObjectByName(element.dataset.modelPart) || null;
         modelReady = true;
-        onModelReady({ ok: true, foundParts: explosionRecords.length, expectedParts: PARTS.length });
+        if (location.search.includes('debug')) {
+          const box = new THREE.Box3().setFromObject(pivot);
+          window.__mxr = { THREE, camera, rig, pivot, unit, rawSize: size.toArray(), worldSize: box.getSize(new THREE.Vector3()).toArray(), worldMin: box.min.toArray(), worldMax: box.max.toArray() };
+        }
+        onModelReady({ ok: true, foundParts: partRecords.length, expectedParts: PARTS.length });
         resolve(true);
       }, (event) => {
-        if (event.total > 0) onProgress(event.loaded / event.total, '正在载入产品三维模型');
+        if (event.total) onProgress(0.6 + (event.loaded / event.total) * 0.4, '正在载入产品三维模型');
       }, (error) => {
-        console.warn('Product GLB unavailable; continue with the static product image.', error);
-        onModelReady({ ok: false, foundParts: 0, expectedParts: PARTS.length });
+        console.warn('Product model unavailable', error);
+        onModelReady({ ok: false });
         resolve(false);
       });
     });
-    return modelLoadPromise;
+    return modelPromise;
   }
 
-  function setStageWeights(index, progress) {
-    const blend = smoothstep(0.72, 0.99, progress);
-    for (const stage of stageInstances) {
-      const weight = stage.index === index ? 1 - blend : (stage.index === index + 1 ? blend : 0);
-      stage.weight = weight;
-      stage.root.visible = weight > 0.002;
-      for (const entry of stage.faders) {
-        entry.material.opacity = entry.opacity * weight;
-        const stageWeight = entry.material.uniforms?.uStageWeight;
-        if (stageWeight) stageWeight.value = weight;
-      }
-    }
+  const numeric = ['az', 'el', 'dist', 'ty', 'ox', 'pan', 'word', 'scan', 'screen', 'explode', 'xray', 'ripple', 'drawer', 'fibers', 'halo'];
+  function mix(index, progress) {
+    const a = CHAPTERS[index];
+    const b = CHAPTERS[Math.min(index + 1, CHAPTERS.length - 1)];
+    const travel = index === CHAPTERS.length - 1 ? 0 : ease(smoothstep(0.5, 1, progress));
+    const out = { a, b, travel };
+    for (const key of numeric) out[key] = lerp(a[key] || 0, b[key] || 0, travel);
+    const la = LIGHTS[a.light];
+    const lb = LIGHTS[b.light];
+    out.light = {
+      key: la.key.map((v, i) => lerp(v, lb.key[i], travel)), keyI: lerp(la.keyI, lb.keyI, travel),
+      rim: la.rim.map((v, i) => lerp(v, lb.rim[i], travel)), rimI: lerp(la.rimI, lb.rimI, travel), env: lerp(la.env, lb.env, travel),
+    };
+    return out;
   }
 
-  function updateCallouts(state) {
-    const visible = Boolean(modelReady && state.scene === 'structure');
+  const target = new THREE.Vector3();
+  const camPos = new THREE.Vector3();
+  const smoothPos = new THREE.Vector3(0, 1.5, 9);
+  const smoothTarget = new THREE.Vector3(0, 1.2, 0);
+  const tmp = new THREE.Vector3();
+  let smoothOx = 0;
+  let firstFrame = true;
+  let viewW = window.innerWidth;
+  let viewH = window.innerHeight;
+
+  function fitPlate(entry, panX) {
+    const h = 2 * BG_DISTANCE * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const w = h * camera.aspect;
+    const cover = 1.5;
+    let pw = w * cover;
+    let ph = pw / entry.aspect;
+    if (ph < h * 1.15) { ph = h * 1.15; pw = ph * entry.aspect; }
+    entry.mesh.scale.set(pw, ph, 1);
+    entry.mesh.position.x = panX * w;
+  }
+
+  function updateCallouts(state, explodeAmount) {
     if (!calloutRoot) return;
+    const visible = modelReady && state.scene === 'structure' && explodeAmount > 0.35;
     calloutRoot.classList.toggle('is-visible', visible);
     if (!visible) return;
-    camera.updateMatrixWorld(true);
-    productRig.updateMatrixWorld(true);
     for (const element of calloutNodes) {
-      const object = element._modelNode;
-      if (!object) {
-        element.hidden = true;
-        continue;
-      }
-      const position = object.getWorldPosition(new THREE.Vector3());
-      position.project(camera);
-      const outside = position.z < -1 || position.z > 1 || position.x < -0.98 || position.x > 0.98 || position.y < -0.95 || position.y > 0.95;
+      const node = element._node;
+      if (!node) { element.hidden = true; continue; }
+      const p = node.getWorldPosition(tmp).project(camera);
+      const outside = p.z > 1 || Math.abs(p.x) > 0.96 || Math.abs(p.y) > 0.94;
       element.hidden = outside;
       if (!outside) {
-        element.style.setProperty('--anchor-x', `${(position.x * 0.5 + 0.5) * window.innerWidth}px`);
-        element.style.setProperty('--anchor-y', `${(-position.y * 0.5 + 0.5) * window.innerHeight}px`);
+        element.style.setProperty('--anchor-x', `${(p.x * 0.5 + 0.5) * viewW}px`);
+        element.style.setProperty('--anchor-y', `${(-p.y * 0.5 + 0.5) * viewH}px`);
       }
     }
   }
 
-  function update(state, deltaSeconds, { ambient = true, pointerX = 0, pointerY = 0, reducedMotion = false } = {}) {
+  let time = 0;
+
+  function update(state, deltaSeconds = 1 / 60, options = {}) {
     if (!state) return;
-    const index = clamp(Math.round(state.index), 0, STAGES.length - 1);
-    const progress = clamp01(state.progress);
-    const journey = clamp01(state.journey);
-    setStageWeights(index, progress);
+    const { ambient = true, pointerX = 0, pointerY = 0, reducedMotion = false } = options;
+    const live = ambient && !reducedMotion;
+    time += live ? deltaSeconds : 0;
+    const index = clamp(Math.round(state.index), 0, CHAPTERS.length - 1);
+    const progress = clamp(state.progress, 0, 1);
+    const p = mix(index, progress);
+    const sceneId = CHAPTERS[index].id;
 
-    const cameraTarget = cameraPath.getPointAt(journey);
-    const lookTarget = lookPath.getPointAt(journey);
-    if (ambient && !reducedMotion) {
-      lookTarget.x += clamp(pointerX, -1, 1) * 0.11;
-      lookTarget.y -= clamp(pointerY, -1, 1) * 0.07;
-    }
-    const smoothing = reducedMotion ? 1 : 1 - Math.exp(-Math.min(0.1, Math.max(0.001, deltaSeconds)) * 4.8);
-    cameraNow.lerp(cameraTarget, smoothing);
-    lookNow.lerp(lookTarget, smoothing);
-    camera.position.copy(cameraNow);
-    camera.lookAt(lookNow);
+    const dolly = 1 - 0.07 * smoothstep(0, 0.6, progress) * (1 - p.travel);
+    const az = p.az + (live ? pointerX * 0.06 : 0);
+    const el = p.el + (live ? -pointerY * 0.03 : 0);
+    target.set(0, PRODUCT_HEIGHT * 0.5 + p.ty, 0);
+    camPos.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)).multiplyScalar(p.dist * dolly).add(target);
+    const k = firstFrame || !live ? 1 : 1 - Math.exp(-Math.min(0.1, deltaSeconds) * 6);
+    smoothPos.lerp(camPos, k);
+    smoothTarget.lerp(target, k);
+    smoothOx = lerp(smoothOx, viewW < 760 ? 0 : p.ox, k);
+    firstFrame = false;
+    camera.position.copy(smoothPos);
+    camera.lookAt(smoothTarget);
+    camera.setViewOffset(viewW, viewH, -smoothOx * viewW * 0.5, 0, viewW, viewH);
+    camera.updateMatrixWorld(true);
 
-    const current = STAGES[index];
-    const next = STAGES[Math.min(index + 1, STAGES.length - 1)];
-    const blend = progress;
-    const yaw = current.yaw + (next.yaw - current.yaw) * blend;
-    const scale = current.scale + (next.scale - current.scale) * blend;
-    if (productRig) {
-      productRig.position.copy(modelPath.getPointAt(journey));
-      productRig.scale.setScalar(scale);
-      productRig.rotation.y = yaw + (ambient && !reducedMotion ? Math.sin(performance.now() * 0.00018) * 0.012 : 0);
-      productRig.updateMatrixWorld(true);
+    keyLight.color.setRGB(...p.light.key);
+    keyLight.intensity = p.light.keyI;
+    rimLight.color.setRGB(...p.light.rim);
+    rimLight.intensity = p.light.rimI;
+    scene.environmentIntensity = p.light.env;
+
+    const pan = p.pan * (progress - 0.5) * 2;
+    for (const [key, entry] of Object.entries(bgMeshes)) {
+      const isA = key === p.a.bg;
+      const isB = key === p.b.bg;
+      entry.mesh.visible = isA || (isB && p.travel > 0.001);
+      if (!entry.mesh.visible) continue;
+      entry.material.opacity = isA ? 1 : p.travel;
+      entry.mesh.renderOrder = isA ? -101 : -100;
+      fitPlate(entry, pan);
     }
 
-    const activeStage = stageInstances[index];
-    if (activeStage?.scan) {
-      const scanAmount = index === 1 ? 1 : (index === 2 ? 0.38 : 0);
-      activeStage.scan.material.uniforms.uProgress.value = index === 1 ? progress : 0.82;
-      activeStage.scan.material.uniforms.uStrength.value = scanAmount * (ambient && !reducedMotion ? 0.8 + Math.sin(performance.now() * 0.002) * 0.12 : 0.68);
+    const halfH = (d) => d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    for (const [key, entry] of Object.entries(fgMeshes)) {
+      const w = (p.a.fg.includes(key) ? 1 - p.travel : 0) + (p.b.fg.includes(key) ? p.travel : 0);
+      entry.mesh.visible = w > 0.001;
+      if (!entry.mesh.visible) continue;
+      const { layer } = entry;
+      const hh = halfH(layer.d);
+      const hw = hh * camera.aspect;
+      const drift = layer.drift * (progress - 0.5) * 0.5 + (live ? Math.sin(time * 0.4 + layer.d) * 0.01 : 0);
+      entry.mesh.position.set((layer.x + drift) * hw, layer.y * hh + (progress - 0.5) * layer.drift * -0.2 * hh, -layer.d);
+      entry.mesh.scale.setScalar(layer.h * 2 * hh);
+      entry.material.opacity = layer.opacity * w;
     }
-    if (productRig && explosionRecords.length) {
-      let amount = 0;
-      if (state.scene === 'structure') amount = progress < 0.66 ? smoothstep(0.08, 0.54, progress) : 1 - smoothstep(0.72, 0.98, progress);
-      for (const item of explosionRecords) item.object.position.copy(item.base).addScaledVector(item.delta, amount * 0.86);
-      if (state.scene === 'drawer' && drawerRecord) {
-        const drawerAmount = smoothstep(0.12, 0.5, progress) * (1 - smoothstep(0.74, 0.98, progress));
-        drawerRecord.object.position.copy(drawerRecord.base).addScaledVector(drawerRecord.delta, drawerAmount * 0.86);
+
+    wordmark.visible = p.word > 0.002;
+    if (wordmark.visible) {
+      tmp.subVectors(smoothTarget, camera.position).setY(0).normalize();
+      wordmark.position.copy(smoothTarget).addScaledVector(tmp, 3.4);
+      wordmark.position.y = PRODUCT_HEIGHT * 0.68;
+      wordmark.quaternion.copy(camera.quaternion);
+      wordmark.scale.setScalar(3.1);
+      wordMaterial.opacity = 0.92 * p.word;
+    }
+
+    rig.rotation.y = live ? Math.sin(time * 0.25) * 0.02 : 0;
+
+    if (modelReady) {
+      if (videoReady && screenVideo.duration) {
+        const local = sceneId === 'scan' ? progress * 0.55 : sceneId === 'result' ? 0.55 + progress * 0.45 : 0.98;
+        const t = Math.min(screenVideo.duration - 0.05, local * screenVideo.duration);
+        if (Math.abs(screenVideo.currentTime - t) > 0.06 && !screenVideo.seeking) screenVideo.currentTime = t;
       }
+      if (screenPlane) screenPlane.material.color.setScalar(0.78 + p.screen * 0.12);
+
+      const explodeAmount = sceneId === 'structure' ? smoothstep(0.04, 0.4, progress) * (1 - smoothstep(0.72, 0.96, progress)) : 0;
+      for (const r of partRecords) r.object.position.copy(r.base).addScaledVector(r.delta, explodeAmount);
+      if (drawerRecord) {
+        const drawerAmount = sceneId === 'drawer' ? smoothstep(0.06, 0.42, progress) * (1 - smoothstep(0.8, 0.98, progress)) : 0;
+        drawerRecord.object.position.copy(drawerRecord.base).addScaledVector(drawerRecord.delta, drawerAmount);
+      }
+      const opacity = 1 - explodeAmount * 0.9;
+      for (const m of shellMaterials) {
+        m.transparent = opacity < 0.995 || Boolean(m.map);
+        m.opacity = opacity;
+        m.depthWrite = opacity > 0.99 && !m.map;
+      }
+      if (internalMaterial) internalMaterial.emissiveIntensity = explodeAmount * 0.9;
+      for (const m of shellMaterials) if (m.color && !m.map) m.color.setRGB(lerp(0.9, 0.62, explodeAmount), lerp(0.89, 0.84, explodeAmount), lerp(0.866, 0.95, explodeAmount));
+      updateCallouts({ scene: sceneId }, explodeAmount);
     }
 
-    for (const stage of stageInstances) {
-      if (stage.weight <= 0) continue;
-      for (const rotor of stage.rotors) {
-        if (ambient && !reducedMotion) rotor.object.rotation.z += deltaSeconds * rotor.rate;
-      }
-      if (stage.rings.length) {
-        stage.rings.forEach((ring, ringIndex) => {
-          const pulse = ambient && !reducedMotion ? (performance.now() * 0.00022 + ringIndex * 0.32) % 1 : 0.42;
-          const size = 0.82 + pulse * 0.48;
-          ring.scale.set(size, size, size);
-          ring.material.opacity = (0.24 - ringIndex * 0.045) * stage.weight * (1 - pulse * 0.62);
-        });
-      }
+    scanBeam.visible = p.scan > 0.01 || p.screen > 0.01;
+    scanMaterial.uniforms.uProgress.value = sceneId === 'scan' ? (progress * 1.6) % 1.15 : (time * 0.25) % 1.15;
+    scanMaterial.uniforms.uStrength.value = Math.max(p.scan * 0.55, p.screen * 0.2);
+
+    ripples.forEach((ring) => {
+      ring.visible = p.ripple > 0.01;
+      if (!ring.visible) return;
+      const phase = ((live ? time * 0.18 : 0.3) + ring.userData.phase) % 1;
+      const r = 1.2 + phase * 3.4;
+      ring.scale.set(r, r, r);
+      ring.position.y = 0.01;
+      ring.material.opacity = p.ripple * 0.5 * (1 - phase);
+    });
+    halo.visible = p.halo > 0.01;
+    if (halo.visible) {
+      haloMaterial.opacity = p.halo * 0.85;
+      halo.lookAt(camera.position);
+      halo.rotateZ(time * 0.05);
     }
 
-    if (state.scene === 'scan' || state.scene === 'result') {
-      rimLight.intensity = 1.65;
-      rimLight.color.setHex(0x91d9f1);
-    } else {
-      rimLight.intensity = 1.2;
-      rimLight.color.setHex(0xb8d8e4);
+    const pos = particleGeometry.attributes.position.array;
+    if (live) {
+      for (let i = 0; i < particleCount; i += 1) {
+        const sd = seeds[i];
+        pos[i * 3 + 1] += deltaSeconds * (p.ripple > 0.5 ? -0.5 - sd * 0.6 : 0.03 + sd * 0.05);
+        pos[i * 3] += deltaSeconds * Math.sin(time * 0.3 + sd * 6) * 0.03;
+        if (pos[i * 3 + 1] > 2.9) pos[i * 3 + 1] = -2.9;
+        if (pos[i * 3 + 1] < -2.9) pos[i * 3 + 1] = 2.9;
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
     }
-    updateCallouts(state);
-    renderer.render(scene, camera);
+    const cool = Math.max(p.scan, p.screen * 0.6, p.ripple);
+    particleMaterial.color.setRGB(lerp(1, 0.75, cool), lerp(0.95, 0.93, cool), lerp(0.85, 1, cool));
+    particleMaterial.size = 0.04 + p.fibers * 0.04 + p.ripple * 0.02;
+    particleMaterial.opacity = 0.55 + p.fibers * 0.3;
+
+    if (gradePass) {
+      gradePass.uniforms.uTime.value = time * 60;
+      gradePass.uniforms.uWarm.value = 0.6 * (1 - Math.max(p.scan, p.screen));
+      gradePass.uniforms.uVignette.value = 0.3 + p.scan * 0.15;
+    }
+    if (bloomPass) bloomPass.strength = 0.14 + p.halo * 0.22 + p.scan * 0.1;
+
+    if (composer) composer.render(deltaSeconds);
+    else renderer.render(scene, camera);
   }
 
   function resize() {
-    const width = Math.max(1, window.innerWidth);
-    const height = Math.max(1, window.innerHeight);
-    const currentLowPower = width < 760 || (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency < 6);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, currentLowPower ? 1.0 : 1.4));
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 1.25 : 1.75);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(viewW, viewH, false);
+    camera.aspect = viewW / Math.max(1, viewH);
     camera.updateProjectionMatrix();
+    if (composer) {
+      composer.setPixelRatio(dpr);
+      composer.setSize(viewW, viewH);
+    }
   }
-
-  function dispose() {
-    renderer.dispose();
-    textures && Object.values(textures).forEach((texture) => texture?.dispose());
-    dotTexture.dispose();
-  }
-
   resize();
-  onProgress(0.78, '空间场景已就位，正在准备产品结构');
-  return { update, resize, dispose, loadModelAsset, get hasModel() { return modelReady; }, get expectedParts() { return PARTS.length; } };
+  onProgress(0.6, '场景已就绪');
+
+  return {
+    update,
+    resize,
+    loadModelAsset,
+    get modelReady() { return modelReady; },
+    dispose() {
+      screenVideo.pause();
+      renderer.dispose();
+      pmrem.dispose();
+    },
+  };
 }

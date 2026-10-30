@@ -13,7 +13,7 @@ const stepText = document.getElementById('worldStep');
 const stageText = document.getElementById('worldStage');
 const motionToggle = document.getElementById('motionToggle');
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-const chapterLinks = [...document.querySelectorAll('.chapter-rail a')];
+const chapterLinks = [...document.querySelectorAll('.chapter-index a')];
 let reducedMotion = reducedMotionQuery.matches;
 let ambientMotion = !reducedMotion;
 let timeline = measureStoryState(chapters, window.innerHeight, window.scrollY, document.documentElement.scrollHeight - window.innerHeight);
@@ -184,10 +184,8 @@ async function initWorld() {
     startFrameLoop();
     if (navigator.connection?.saveData || (Number(navigator.deviceMemory) > 0 && Number(navigator.deviceMemory) <= 2)) {
       showFallback('已为省流/低配设备保留轻量场景与产品图');
-    } else if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(loadProductModel, { timeout: 1800 });
     } else {
-      window.setTimeout(loadProductModel, 500);
+      loadProductModel();
     }
   } catch (error) {
     console.warn('Three.js world could not initialize; keep the static product image.', error);
@@ -237,6 +235,20 @@ window.addEventListener('pointermove', (event) => {
 }, { passive: true });
 
 for (const video of videos) video.preload = 'none';
+
+// Staggered copy reveal (Kage-style editorial entrance)
+const revealTargets = [...document.querySelectorAll('[data-reveal]')];
+if ('IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) entry.target.classList.add('is-in');
+    }
+  }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
+  revealTargets.forEach((el) => observer.observe(el));
+} else {
+  revealTargets.forEach((el) => el.classList.add('is-in'));
+}
+
 setMotionLabel();
 updateActiveChapter();
 initWorld();
