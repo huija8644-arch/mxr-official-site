@@ -136,17 +136,18 @@ function createScanBeam(THREE, stage) {
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
-    uniforms: { uProgress: { value: 0 }, uStrength: { value: 0 } },
+    uniforms: { uProgress: { value: 0 }, uStrength: { value: 0 }, uStageWeight: { value: 1 } },
     vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader: `
       varying vec2 vUv;
       uniform float uProgress;
       uniform float uStrength;
+      uniform float uStageWeight;
       void main(){
         float band=exp(-pow((vUv.y-uProgress)*34.0,2.0));
         float halo=exp(-pow((vUv.y-uProgress)*7.0,2.0))*0.18;
         float edge=smoothstep(0.0,0.18,vUv.x)*smoothstep(1.0,0.82,vUv.x);
-        float alpha=(band*0.34+halo)*edge*uStrength;
+        float alpha=(band*0.34+halo)*edge*uStrength*uStageWeight;
         gl_FragColor=vec4(0.36,0.78,0.97,alpha);
       }`,
   });
@@ -396,7 +397,11 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
       const weight = stage.index === index ? 1 - blend : (stage.index === index + 1 ? blend : 0);
       stage.weight = weight;
       stage.root.visible = weight > 0.002;
-      for (const entry of stage.faders) entry.material.opacity = entry.opacity * weight;
+      for (const entry of stage.faders) {
+        entry.material.opacity = entry.opacity * weight;
+        const stageWeight = entry.material.uniforms?.uStageWeight;
+        if (stageWeight) stageWeight.value = weight;
+      }
     }
   }
 
