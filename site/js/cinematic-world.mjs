@@ -55,7 +55,11 @@ const PARTS = [
   { name: 'RAPID-HEAT-PIPE-BRACKET_ASM_60_ASM', delta: [-0.08, 0, 0] },
   { name: 'FACE-TOWEL-BOTTOM-COVER_ASM_27_ASM', delta: [0, -0.06, 0] },
 ];
-const DRAWER_PART = { name: 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM', delta: [0, 0, 0.11] };
+// The display/front face is +Z in this GLB; these sibling sliding roots move together.
+const DRAWER_PARTS = [
+  { name: 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-COVER-ASS_AS_ASM', delta: [0, 0, 0.11] },
+];
 
 const PRODUCT_HEIGHT = 2.5; // world units
 const ease = (t) => t * t * (3 - 2 * t);
@@ -383,7 +387,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   const shellMaterials = [];
   let internalMaterial = null;
   let partRecords = [];
-  let drawerRecord = null;
+  let drawerRecords = [];
   let screenPlane = null;
   const calloutNodes = [...document.querySelectorAll('[data-model-part]')];
   const calloutRoot = document.getElementById('structureCallouts');
@@ -471,7 +475,10 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
           return { object, base: object.position.clone(), delta: b.sub(a) };
         };
         partRecords = PARTS.map(recordFor).filter(Boolean);
-        drawerRecord = recordFor(DRAWER_PART);
+        drawerRecords = DRAWER_PARTS.map(recordFor).filter(Boolean);
+        if (drawerRecords.length !== DRAWER_PARTS.length) {
+          console.warn(`Drawer animation parts found ${drawerRecords.length}/${DRAWER_PARTS.length}`);
+        }
         for (const element of calloutNodes) element._node = model.getObjectByName(element.dataset.modelPart) || null;
         modelReady = true;
         if (location.search.includes('debug')) {
@@ -626,9 +633,9 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
 
       const explodeAmount = sceneId === 'structure' ? smoothstep(0.04, 0.4, progress) * (1 - smoothstep(0.72, 0.96, progress)) : 0;
       for (const r of partRecords) r.object.position.copy(r.base).addScaledVector(r.delta, explodeAmount);
-      if (drawerRecord) {
-        const drawerAmount = sceneId === 'drawer' ? smoothstep(0.06, 0.42, progress) * (1 - smoothstep(0.8, 0.98, progress)) : 0;
-        drawerRecord.object.position.copy(drawerRecord.base).addScaledVector(drawerRecord.delta, drawerAmount);
+      const drawerAmount = sceneId === 'drawer' ? smoothstep(0.06, 0.42, progress) * (1 - smoothstep(0.8, 0.98, progress)) : 0;
+      for (const r of drawerRecords) {
+        r.object.position.copy(r.base).addScaledVector(r.delta, drawerAmount);
       }
       const opacity = 1 - explodeAmount * 0.9;
       for (const m of shellMaterials) {
