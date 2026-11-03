@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#efe9df">
+  <meta name="theme-color" content="#f1f5f7">
   <meta name="description" content="棉小柔智能肤质毛巾机，把识肤这一步放进每天的用巾时刻。跟随九幕连续镜头，从清晨、识肤、结构到柔软日常。">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="棉小柔">
@@ -11,7 +11,7 @@
   <meta property="og:description" content="以智能识肤与柔软用巾，重新想象每天的护理时刻。">
   <title>棉小柔｜被看见的肌肤，从一方毛巾开始</title>
   <link rel="icon" type="image/webp" href="./assets/brand-logo.webp">
-  <link rel="preload" as="image" href="./assets/bg-hero.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="./assets/bg-hero-cool.webp" fetchpriority="high">
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">
     {
@@ -29,7 +29,7 @@
   <div class="world" id="world" aria-hidden="true">
     <canvas id="worldCanvas"></canvas>
     <div class="world__fallback">
-      <img src="./assets/bg-hero.webp" alt="" class="world__fallback-bg">
+      <img src="./assets/bg-hero-cool.webp" alt="" class="world__fallback-bg">
       <img id="productFallback" src="./assets/product-cutout.webp" alt="">
     </div>
   </div>
@@ -173,7 +173,13 @@
         <p class="body-copy">回到同一处清晨梳妆台。智能设备不必抢走生活的主角，只让熟悉的护理，多一份从容。</p>
       </div>
       <div class="gallery gallery--single" data-reveal>
-        <figure><img src="./assets/gallery-morning.webp" alt="清晨使用棉小柔的场景" loading="lazy"><figcaption><span>MORNING</span>清晨梳妆台</figcaption></figure>
+        <figure>
+          <video class="gallery__video" controls playsinline preload="none" poster="./assets/gallery-morning.webp" aria-labelledby="ritual-film-caption">
+            <source src="./assets/brand-film.mp4" type="video/mp4">
+            当前浏览器暂不支持播放这段品牌视频。
+          </video>
+          <figcaption id="ritual-film-caption"><span>BRAND FILM</span>棉小柔 · 清晨日常</figcaption>
+        </figure>
       </div>
     </section>
 

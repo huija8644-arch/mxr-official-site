@@ -5,17 +5,17 @@ import { clamp, smoothstep } from './scroll-timeline.mjs';
  * One persistent product in one world; the camera orbits/dollies along chapter keyframes.
  * Each chapter owns a background plate, camera-space foreground layers and local effects.
  * CAD part motion is a visual preview only — not a verified hinge, axis or drawer stroke.
- */
+*/
 
 const BG_FILES = {
-  hero: 'bg-hero.webp', scan: 'bg-scan.webp', structure: 'bg-structure.webp',
-  water: 'bg-water.webp', texture: 'bg-texture.webp', closing: 'bg-closing.webp',
+  hero: 'bg-hero-cool.webp', scan: 'bg-scan.webp', structure: 'bg-structure.webp',
+  water: 'bg-water-cool.webp', texture: 'bg-texture-cool.webp', closing: 'bg-closing-cool.webp',
 };
 
 // x/y: fraction of half-frame at that depth; d: distance from camera; h: height as fraction of frame height
 const FG_LAYERS = {
   blinds: { file: 'fg-blinds-light.webp', x: -0.25, y: 0.2, d: 3.4, h: 1.25, opacity: 0.75, drift: -0.18, additive: true },
-  branch: { file: 'fg-branch-blur.webp', x: -0.78, y: 0.5, d: 2.2, h: 0.62, opacity: 1, drift: -0.55 },
+  branch: { file: 'fg-branch-blur.webp', x: -0.96, y: 0.5, d: 2.2, h: 0.42, opacity: 0.82, drift: -0.38 },
   curtain: { file: 'foreground-01.webp', x: 0.93, y: 0.0, d: 2.6, h: 1.25, opacity: 0.7, drift: -0.35 },
   sprig: { file: 'foreground-02.webp', x: 0.88, y: -0.62, d: 2.4, h: 0.55, opacity: 0.95, drift: -0.5 },
   droplets: { file: 'foreground-07.webp', x: -0.62, y: 0.35, d: 2.8, h: 0.5, opacity: 0.85, drift: -0.4 },
@@ -27,22 +27,21 @@ const FG_LAYERS = {
 // Camera keyframes. az: orbit angle (rad, + = camera right of product front); el: elevation;
 // dist: distance; ty: look target height offset; ox: horizontal frame offset (+ pushes product right).
 const CHAPTERS = [
-  { id: 'intro', bg: 'hero', fg: ['blinds', 'branch', 'sprig'], az: 0.72, el: 0.07, dist: 10.6, ty: 0.15, ox: 0.14, pan: -0.04, word: 1, light: 'warm' },
+  { id: 'intro', bg: 'hero', fg: ['blinds', 'branch', 'sprig'], az: 0.72, el: 0.07, dist: 10.6, ty: 0.42, ox: 0.14, pan: -0.04, word: 1, light: 'daylight' },
   { id: 'scan', bg: 'scan', fg: ['bokeh'], az: 0.16, el: 0.03, dist: 5.6, ty: 0.42, ox: 0.2, pan: 0, scan: 1, screen: 1, light: 'cool' },
   { id: 'result', bg: 'scan', fg: ['bokeh'], az: -0.3, el: 0.1, dist: 6.6, ty: 0.32, ox: 0.22, pan: 0.03, screen: 1, light: 'cool' },
   { id: 'structure', bg: 'structure', fg: [], az: 0.95, el: 0.3, dist: 13.2, ty: 0.25, ox: 0.18, pan: 0, explode: 1, xray: 1, light: 'studio' },
-  { id: 'towel', bg: 'water', fg: ['droplets', 'branch'], az: 0.55, el: -0.02, dist: 11.5, ty: -0.1, ox: -0.22, pan: 0.04, ripple: 1, light: 'warm' },
+  { id: 'towel', bg: 'water', fg: ['droplets', 'branch'], az: 0.55, el: -0.02, dist: 11.5, ty: -0.1, ox: -0.22, pan: 0.04, ripple: 1, light: 'daylight' },
   { id: 'drawer', bg: 'structure', fg: [], az: 0.42, el: 0.04, dist: 8.4, ty: -0.35, ox: 0.18, pan: 0, drawer: 1, light: 'studio' },
-  { id: 'ritual', bg: 'hero', fg: ['blinds', 'sprig', 'towel'], az: -0.5, el: 0.08, dist: 9.6, ty: 0.12, ox: 0.2, pan: 0.06, light: 'warm' },
-  { id: 'texture', bg: 'texture', fg: ['fiber', 'bokeh'], az: 0.8, el: 0.12, dist: 12.5, ty: 0.1, ox: 0.28, pan: -0.05, fibers: 1, light: 'warm' },
-  { id: 'closing', bg: 'closing', fg: ['bokeh'], az: 0.32, el: 0.16, dist: 13.0, ty: 1.0, ox: 0.0, pan: 0, halo: 1, light: 'gold' },
+  { id: 'ritual', bg: 'hero', fg: ['blinds', 'sprig', 'towel'], az: -0.5, el: 0.08, dist: 9.6, ty: 0.39, ox: 0.2, pan: 0.06, light: 'daylight' },
+  { id: 'texture', bg: 'texture', fg: ['fiber', 'bokeh'], az: 0.8, el: 0.12, dist: 12.5, ty: 0.1, ox: 0.28, pan: -0.05, fibers: 1, light: 'daylight' },
+  { id: 'closing', bg: 'closing', fg: ['bokeh'], az: 0.32, el: 0.16, dist: 13.0, ty: 1.0, ox: 0.0, pan: 0, halo: 1, light: 'studio' },
 ];
 
 const LIGHTS = {
-  warm: { key: [1.0, 0.9, 0.76], keyI: 1.7, rim: [0.75, 0.88, 1.0], rimI: 1.1, env: 0.42 },
+  daylight: { key: [0.96, 0.985, 1.0], keyI: 1.55, rim: [0.64, 0.84, 1.0], rimI: 1.3, env: 0.42 },
   cool: { key: [0.92, 0.96, 1.0], keyI: 1.2, rim: [0.45, 0.85, 1.0], rimI: 2.2, env: 0.32 },
-  studio: { key: [1.0, 0.99, 0.97], keyI: 1.6, rim: [0.7, 0.9, 1.0], rimI: 1.3, env: 0.5 },
-  gold: { key: [1.0, 0.86, 0.66], keyI: 1.7, rim: [1.0, 0.9, 0.7], rimI: 1.6, env: 0.45 },
+  studio: { key: [0.96, 0.985, 1.0], keyI: 1.5, rim: [0.62, 0.86, 1.0], rimI: 1.35, env: 0.44 },
 };
 
 // Preliminary visual offsets in glTF metres (Y-up). Not engineering data.
@@ -55,10 +54,16 @@ const PARTS = [
   { name: 'RAPID-HEAT-PIPE-BRACKET_ASM_60_ASM', delta: [-0.08, 0, 0] },
   { name: 'FACE-TOWEL-BOTTOM-COVER_ASM_27_ASM', delta: [0, -0.06, 0] },
 ];
-// The display/front face is +Z in this GLB; these sibling sliding roots move together.
+// +Z is the verified front. Move only box panels, the outlet cup and its towel piece.
+// Do not move the broad BOTTOM-CVASM parent: it also contains fixed pumps, motor, storage and PCBA.
 const DRAWER_PARTS = [
-  { name: 'FACE-TOWEL-SLIDING-BOTTOM-CVASM_ASM', delta: [0, 0, 0.11] },
-  { name: 'FACE-TOWEL-SLIDING-COVER-ASS_AS_ASM', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-BOTTOM-CV-A_', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-BOTTOM-CV_12', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-COVER-A_83', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-COVER-B_ASM__ASM', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SLIDING-COVER_28', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-CUP_13', delta: [0, 0, 0.11] },
+  { name: 'FACE-TOWEL-SWELLING_6', delta: [0, 0, 0.11] },
 ];
 
 const PRODUCT_HEIGHT = 2.5; // world units
@@ -107,9 +112,9 @@ function dotTexture(THREE) {
 function contactShadowTexture(THREE) {
   return canvasTexture(THREE, 256, 256, (ctx) => {
     const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    g.addColorStop(0, 'rgba(20,16,12,.85)');
-    g.addColorStop(0.45, 'rgba(20,16,12,.35)');
-    g.addColorStop(1, 'rgba(20,16,12,0)');
+    g.addColorStop(0, 'rgba(16,28,36,.66)');
+    g.addColorStop(0.45, 'rgba(16,28,36,.24)');
+    g.addColorStop(1, 'rgba(16,28,36,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 256, 256);
   });
@@ -160,20 +165,22 @@ function makeGradeShader() {
     uniforms: {
       tDiffuse: { value: null },
       uTime: { value: 0 },
-      uVignette: { value: 0.32 },
-      uGrain: { value: 0.035 },
-      uWarm: { value: 0.0 },
+      uVignette: { value: 0.17 },
+      uGrain: { value: 0.012 },
+      uCool: { value: 0.22 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
     fragmentShader: `
-      uniform sampler2D tDiffuse; uniform float uTime; uniform float uVignette; uniform float uGrain; uniform float uWarm;
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uVignette; uniform float uGrain; uniform float uCool;
       varying vec2 vUv;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
       void main(){
         vec4 c = texture2D(tDiffuse, vUv);
         vec3 col = c.rgb;
         col = mix(col, col*col*(3.0-2.0*col), 0.28);
-        col *= mix(vec3(1.0), vec3(1.04,1.0,0.94), uWarm);
+        float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        vec3 coolNeutral = vec3(luma * 0.965, luma * 0.995, min(1.0, luma * 1.035 + 0.002));
+        col = mix(col, coolNeutral, uCool);
         vec2 d = vUv - 0.5; float v = 1.0 - dot(d, d) * 3.2 * uVignette;
         col *= clamp(v, 0.0, 1.0);
         col += (hash(vUv * 1024.0 + uTime) - 0.5) * uGrain;
@@ -192,7 +199,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
 
   const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency < 6) || (navigator.deviceMemory > 0 && navigator.deviceMemory <= 4);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower, powerPreference: 'high-performance' });
-  renderer.setClearColor(0xefe9df, 1);
+  renderer.setClearColor(0xf1f5f7, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 0.92;
@@ -207,7 +214,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   const camera = new THREE.PerspectiveCamera(30, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 200);
   scene.add(camera);
 
-  const keyLight = new THREE.DirectionalLight(0xfff1dc, 3.4);
+  const keyLight = new THREE.DirectionalLight(0xf6fbff, 2.9);
   keyLight.position.set(-5, 7, 5);
   keyLight.castShadow = !lowPower;
   keyLight.shadow.mapSize.set(2048, 2048);
@@ -219,7 +226,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   const rimLight = new THREE.DirectionalLight(0xbfe4ff, 1.6);
   rimLight.position.set(5, 4, -6);
   scene.add(rimLight);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cbb8, 0.35));
+  scene.add(new THREE.HemisphereLight(0xf3f8fb, 0xaab8c0, 0.38));
 
   const manager = new THREE.LoadingManager();
   manager.onProgress = (_url, loaded, total) => onProgress(total ? (loaded / total) * 0.6 : 0, '正在铺设清晨的光');
@@ -274,12 +281,12 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
     fgMeshes[key] = { mesh, material, layer };
   }
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.32 }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.22 }));
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   ground.renderOrder = -5;
   scene.add(ground);
-  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactShadowTexture(THREE), transparent: true, depthWrite: false, opacity: 0.75, toneMapped: false }));
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactShadowTexture(THREE), transparent: true, depthWrite: false, opacity: 0.68, toneMapped: false }));
   contact.rotation.x = -Math.PI / 2;
   contact.renderOrder = -4;
   scene.add(contact);
@@ -304,7 +311,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   }
   const particleGeometry = new THREE.BufferGeometry();
   particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const particleMaterial = new THREE.PointsMaterial({ map: dot, size: 0.05, color: 0xfff1d8, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+  const particleMaterial = new THREE.PointsMaterial({ map: dot, size: 0.05, color: 0xeaf5fb, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
   const particles = new THREE.Points(particleGeometry, particleMaterial);
   particles.frustumCulled = false;
   camera.add(particles);
@@ -329,7 +336,7 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   scanBeam.renderOrder = 10;
   fx.add(scanBeam);
 
-  const haloMaterial = new THREE.MeshBasicMaterial({ color: 0xffe2b0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+  const haloMaterial = new THREE.MeshBasicMaterial({ color: 0xb8e8f7, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
   const halo = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.012, 12, 180), haloMaterial);
   halo.visible = false;
   fx.add(halo);
@@ -393,12 +400,12 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
   const calloutRoot = document.getElementById('structureCallouts');
 
   function buildMaterials() {
-    internalMaterial = new THREE.MeshStandardMaterial({ color: 0xc9b48f, roughness: 0.35, metalness: 0.75, emissive: 0x3aa6c8, emissiveIntensity: 0 });
+    internalMaterial = new THREE.MeshStandardMaterial({ color: 0x9eabb2, roughness: 0.42, metalness: 0.58, emissive: 0x193d4a, emissiveIntensity: 0 });
     return {
-      shell: new THREE.MeshPhysicalMaterial({ color: 0xe6e3dd, roughness: 0.5, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.35, sheen: 0.2, sheenColor: new THREE.Color(0xffffff) }),
-      camera: new THREE.MeshPhysicalMaterial({ color: 0xb8bcc0, roughness: 0.28, metalness: 0.65, clearcoat: 0.6 }),
-      silicone: new THREE.MeshStandardMaterial({ color: 0xd9dbdc, roughness: 0.7 }),
-      window: new THREE.MeshPhysicalMaterial({ color: 0xcfe6ef, roughness: 0.08, transparent: true, opacity: 0.75, clearcoat: 1 }),
+      shell: new THREE.MeshPhysicalMaterial({ color: 0xf0f4f6, roughness: 0.44, metalness: 0, clearcoat: 0.42, clearcoatRoughness: 0.32, sheen: 0.16, sheenColor: new THREE.Color(0xffffff) }),
+      camera: new THREE.MeshPhysicalMaterial({ color: 0xb8c5cb, roughness: 0.28, metalness: 0.58, clearcoat: 0.6 }),
+      silicone: new THREE.MeshStandardMaterial({ color: 0xe0e7ea, roughness: 0.7 }),
+      window: new THREE.MeshPhysicalMaterial({ color: 0xc9e8f1, roughness: 0.08, transparent: true, opacity: 0.75, clearcoat: 1 }),
       screen: new THREE.MeshPhysicalMaterial({ color: 0x15191c, roughness: 0.12, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }),
       internal: internalMaterial,
     };
@@ -462,8 +469,8 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
         scanBeam.scale.set(ps.x * 1.25, ps.y * 1.05, 1);
         scanBeam.position.set(0, ps.y * 0.52, productBox.max.z + 0.05);
         halo.position.set(0, ps.y * 0.55, productBox.min.z - 0.6);
-        contact.scale.set(ps.x * 2.6, ps.z * 1.6, 1);
-        contact.position.set(0, 0.002, (productBox.min.z + productBox.max.z) / 2);
+        contact.scale.set(ps.x * 1.28, ps.z * 0.96, 1);
+        contact.position.set(0, 0.003, (productBox.min.z + productBox.max.z) / 2);
 
         const recordFor = (part) => {
           const object = part && model.getObjectByName(part.name);
@@ -680,14 +687,14 @@ export async function createCinematicWorld({ canvas, onProgress = () => {}, onMo
       particleGeometry.attributes.position.needsUpdate = true;
     }
     const cool = Math.max(p.scan, p.screen * 0.6, p.ripple);
-    particleMaterial.color.setRGB(lerp(1, 0.75, cool), lerp(0.95, 0.93, cool), lerp(0.85, 1, cool));
+    particleMaterial.color.setRGB(lerp(0.9, 0.72, cool), lerp(0.96, 0.9, cool), lerp(1, 1, cool));
     particleMaterial.size = 0.04 + p.fibers * 0.04 + p.ripple * 0.02;
     particleMaterial.opacity = 0.55 + p.fibers * 0.3;
 
     if (gradePass) {
       gradePass.uniforms.uTime.value = time * 60;
-      gradePass.uniforms.uWarm.value = 0.6 * (1 - Math.max(p.scan, p.screen));
-      gradePass.uniforms.uVignette.value = 0.3 + p.scan * 0.15;
+      gradePass.uniforms.uCool.value = 0.22 + Math.max(p.scan, p.screen) * 0.04;
+      gradePass.uniforms.uVignette.value = 0.17 + p.scan * 0.05;
     }
     if (bloomPass) bloomPass.strength = 0.14 + p.halo * 0.22 + p.scan * 0.1;
 
